@@ -1,0 +1,199 @@
+Table "item" {
+  "item_id" Bigint [pk, not null, increment]
+  "item_nombre" "Character varying(50)"
+  "item_stock" Bigint
+  "item_sublimable" Boolean
+  "item_img_base64" "Character varying"
+  "marca_id" Bigint
+  "tipo_id" Bigint
+  "cat_id" Bigint
+  "sub_cat_id" Bigint
+  "size_id" Bigint
+  "org_id" Bigint
+
+  Indexes {
+    marca_id [name: "idx_marca"]
+    tipo_id [name: "idx_tipo_itm"]
+    cat_id [name: "idx_cat"]
+    sub_cat_id [name: "idx_subcat"]
+    size_id [name: "idx_size"]
+    org_id [name: "ix_relationship4"]
+  }
+}
+
+Table "marca" {
+  "marca_id" Bigint [pk, not null]
+  "marca_nombre" "Character varying(50)"
+  "marca_desc" "Character varying(50)"
+}
+
+Table "tipo" {
+  "tipo_id" Bigint [pk, not null]
+  "tipo_nombre" "Character varying(20)"
+  "tipo_desc" "Character varying(50)"
+}
+
+Table "categoria" {
+  "cat_id" Bigint [pk, not null]
+  "cat_nombre" "Character varying(50)"
+  "cat_desc" "Character varying(50)"
+  "tipo_id" Bigint
+
+  Indexes {
+    tipo_id [name: "idx_tipo"]
+  }
+}
+
+Table "sub_categoria" {
+  "sub_cat_id" Bigint [pk, not null]
+  "sub_cat_nombre" "Character varying(50)"
+  "sub_cat_desc" "Character varying(50)"
+  "cat_id" Bigint
+
+  Indexes {
+    cat_id [name: "idx_cat_sub"]
+  }
+}
+
+Table "size_item" {
+  "size_id" Bigint [pk, not null, increment]
+  "size" "Character varying"
+  "size_orden" Bigint
+}
+
+Table "size_tipo" {
+  "size_id" Bigint [not null]
+  "tipo_id" Bigint [not null]
+
+  Indexes {
+    (size_id, tipo_id) [pk, name: "pk_size_tipo"]
+  }
+}
+
+
+Table "ubicacion" {
+  "id" BIGSERIAL [pk, increment]
+  "nombre" TEXT [not null]
+  "descripcion" TEXT
+  "tipo" TEXT
+  "pasillo" TEXT
+  "rack" TEXT
+  "estante" TEXT
+}
+
+Table "stock" {
+  "item_id" BIGINT [not null]
+  "ubicacion_id" BIGINT [not null]
+  "cantidad" NUMERIC(12,2) [not null, default: 0]
+
+  Indexes {
+    (item_id, ubicacion_id) [pk]
+    item_id [name: "idx_stock_item"]
+    ubicacion_id [name: "idx_stock_ubicacion"]
+  }
+}
+
+Table "tipo_movimiento" {
+  "id" BIGSERIAL [pk, increment]
+  "nombre" TEXT [unique, not null]
+  "afecta_stock" BOOLEAN [not null]
+}
+
+Table "usuario" {
+  "usuario_id" Bigint [pk, not null, increment]
+  "usu_username" "Character varying"
+  "usu_password" "Character varying"
+  "usu_creacion" Date
+  "usu_activo" Boolean [default: true]
+  "usu_update" Date
+  "contacto_id" Bigint
+  "rol" Bigint
+
+  Indexes {
+    contacto_id [name: "indx_contacto"]
+    rol [name: "indx_rol"]
+  }
+}
+
+Table "movimiento" {
+  "id" BIGSERIAL [pk, increment]
+  "item_id" BIGINT [not null]
+  "tipo_movimiento_id" BIGINT [not null]
+  "cantidad" NUMERIC(12,2) [not null]
+  "fecha" TIMESTAMPTZ [not null, default: `now()`]
+  "ubicacion_origen_id" BIGINT
+  "ubicacion_destino_id" BIGINT
+  "motivo" TEXT
+  "usuario_id" BIGINT
+
+  Indexes {
+    item_id [name: "idx_movimiento_item"]
+    fecha [name: "idx_movimiento_fecha"]
+    usuario_id [name: "idx_movimiento_usuario"]
+  }
+}
+
+Table "inventario_fisico" {
+  "id" BIGSERIAL [pk, increment]
+  "fecha" TIMESTAMPTZ [not null, default: `now()`]
+  "observaciones" TEXT
+  "usuario_id" BIGINT
+}
+
+Table "ajuste_inventario" {
+  "id" BIGSERIAL [pk, increment]
+  "inventario_fisico_id" BIGINT [not null]
+  "item_id" BIGINT [not null]
+  "ubicacion_id" BIGINT [not null]
+  "stock_actual" NUMERIC(12,2) [not null]
+  "stock_fisico" NUMERIC(12,2) [not null]
+  "diferencia" NUMERIC(12,2)
+
+  Indexes {
+    item_id [name: "idx_ajuste_item"]
+  }
+}
+
+
+
+
+Ref:"ubicacion"."id" < "stock"."ubicacion_id" [delete: cascade]
+
+
+Ref:"tipo_movimiento"."id" < "movimiento"."tipo_movimiento_id"
+
+Ref:"ubicacion"."id" < "movimiento"."ubicacion_origen_id"
+
+Ref:"ubicacion"."id" < "movimiento"."ubicacion_destino_id"
+
+Ref:"usuario".usuario_id < "movimiento"."usuario_id" [delete: set null]
+
+Ref:"usuario".usuario_id < "inventario_fisico"."usuario_id" [delete: set null]
+
+Ref:"inventario_fisico"."id" < "ajuste_inventario"."inventario_fisico_id" [delete: cascade]
+
+Ref:"ubicacion"."id" < "ajuste_inventario"."ubicacion_id"
+
+Ref "marca=item":"marca"."marca_id" < "item"."marca_id" [update: no action, delete: no action]
+
+Ref "tipo=item":"tipo"."tipo_id" < "item"."tipo_id" [update: no action, delete: no action]
+
+Ref "cat=item":"categoria"."cat_id" < "item"."cat_id" [update: no action, delete: no action]
+
+Ref "sub_cat=item":"sub_categoria"."sub_cat_id" < "item"."sub_cat_id" [update: no action, delete: no action]
+
+Ref "tipo=categorias":"tipo"."tipo_id" < "categoria"."tipo_id" [update: no action, delete: no action]
+
+Ref "categorias=subcategorias":"categoria"."cat_id" < "sub_categoria"."cat_id" [update: no action, delete: no action]
+
+Ref "size=item":"size_item"."size_id" < "item"."size_id" [update: no action, delete: no action]
+
+Ref "size=tipos":"size_item"."size_id" < "size_tipo"."size_id" [update: no action, delete: no action]
+
+Ref "tipo=size":"tipo"."tipo_id" < "size_tipo"."tipo_id" [update: no action, delete: no action]
+
+ref "item>movimiento": item.item_id < movimiento.item_id
+
+ref "item<stock":item.item_id<stock.item_id
+
+ref "item<ajuste_inventario":item.item_id< ajuste_inventario.item_id

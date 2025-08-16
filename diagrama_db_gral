@@ -1,0 +1,368 @@
+Table "item" {
+  "item_id" Bigint [pk, not null, increment]
+  "item_nombre" "Character varying(50)"
+  "item_stock" Bigint
+  "item_sublimable" Boolean
+  "item_img_base64" "Character varying"
+  "marca_id" Bigint
+  "tipo_id" Bigint
+  "cat_id" Bigint
+  "sub_cat_id" Bigint
+  "size_id" Bigint
+  "org_id" Bigint
+
+  Indexes {
+    marca_id [name: "idx_marca"]
+    tipo_id [name: "idx_tipo_itm"]
+    cat_id [name: "idx_cat"]
+    sub_cat_id [name: "idx_subcat"]
+    size_id [name: "idx_size"]
+    org_id [name: "ix_relationship4"]
+  }
+}
+
+Table "marca" {
+  "marca_id" Bigint [pk, not null]
+  "marca_nombre" "Character varying(50)"
+  "marca_desc" "Character varying(50)"
+}
+
+Table "tipo" {
+  "tipo_id" Bigint [pk, not null]
+  "tipo_nombre" "Character varying(20)"
+  "tipo_desc" "Character varying(50)"
+}
+
+Table "categoria" {
+  "cat_id" Bigint [pk, not null]
+  "cat_nombre" "Character varying(50)"
+  "cat_desc" "Character varying(50)"
+  "tipo_id" Bigint
+
+  Indexes {
+    tipo_id [name: "idx_tipo"]
+  }
+}
+
+Table "sub_categoria" {
+  "sub_cat_id" Bigint [pk, not null]
+  "sub_cat_nombre" "Character varying(50)"
+  "sub_cat_desc" "Character varying(50)"
+  "cat_id" Bigint
+
+  Indexes {
+    cat_id [name: "idx_cat_sub"]
+  }
+}
+
+Table "producto" {
+  "producto_id" Bigint [pk, not null, increment]
+  "producto_nombre" "Character varying(50)" [not null]
+  "producto_margen" Bigint
+}
+
+Table "servicio" {
+  "servicio_id" Bigint [pk, not null, increment]
+  "servicio_nombre" "Character varying(50)"
+  "servicio_desc" "Character varying(50)"
+  "servicio_costo" Bigint
+  "servicio_tiempo" Bigint
+  "servicio_img_base64" "Character varying"
+}
+
+Table "prod_serv" {
+  "producto_id" Bigint [not null]
+  "servicio_id" Bigint [not null]
+
+  Indexes {
+    (producto_id, servicio_id) [pk, name: "pk_prod_serv"]
+  }
+}
+
+Table "documento" {
+  "doc_id" Bigint [pk, not null, increment]
+  "doc_creacion" Date
+  "doc_comentario" "Character varying(250)"
+  "doc_aceptado" Boolean
+  "tipo_doc_id" Bigint
+  "org_id" Bigint
+
+  Indexes {
+    tipo_doc_id [name: "ix_relationship14"]
+    org_id [name: "ix_relationship2"]
+  }
+}
+
+Table "tipo_doc" {
+  "tipo_doc_id" Bigint [pk, not null]
+  "tipo_doc_nom" "Character varying(50)"
+  "tipo_doc_desc" "Character varying(50)"
+  "tipo_doc_cod_sii" "Character varying"
+}
+
+Table "detalle_doc" {
+  "producto_id" Bigint [not null]
+  "doc_id" Bigint [not null]
+  "progreso" Bigint
+  "comentario" "Character varying"
+
+  Indexes {
+    (producto_id, doc_id) [pk, name: "pk_detalle_doc"]
+  }
+}
+
+Table "contacto" {
+  "contacto_id" Bigint [pk, not null, increment]
+  "contacto_nombre" "Character varying(50)"
+  "contacto_direccion" "Character varying(50)"
+  "contacto_celular" "Character varying(50)"
+  "contacto_correo" "Character varying(50)"
+  "contacto_rrss" "Character varying(50)"
+  "contacto_url" "Character varying(50)"
+  "contacto_img_base64" "Character varying"
+  "tip_con_id" Bigint
+
+  Indexes {
+    tip_con_id [name: "ix_relationship17"]
+  }
+}
+
+Table "tipo_contacto" {
+  "tip_con_id" Bigint [pk, not null]
+  "tip_con_nombre" "Character varying(50)"
+  "tip_con_desc" "Character varying(50)"
+}
+
+Table "pedido" {
+  "pedido_id" Bigint [pk, not null, increment]
+  "ped_creacion" Date
+  "ped_fecha_termino" Date
+  "ped_fecha_entrega" Date
+  "ped_fecha_cierre" Date
+  "ped_comentario" "Character varying"
+  "ped_prioridad" Bigint
+  "doc_id" Bigint
+  "estado_id" Bigint
+
+  Indexes {
+    doc_id [name: "ix_relationship11"]
+    estado_id [name: "ix_relationship15"]
+  }
+}
+
+Table "costo" {
+  "costo_id" Bigint [pk, not null, increment]
+  "costo_creacion" Date
+  "costo" Bigint
+  "costo_activo" Boolean
+  "item_id" bigint
+  indexes {
+    costo_id [pk,name:"pk_id_costo"]
+    item_id [pk, name:"pk_costo_item_id"]
+  }
+}
+
+Table "usuario" {
+  "usuario_id" Bigint [pk, not null, increment]
+  "usu_username" "Character varying"
+  "usu_password" "Character varying"
+  "usu_creacion" Date
+  "usu_activo" Boolean [default: true]
+  "usu_update" Date
+  "contacto_id" Bigint
+  "rol" Bigint
+
+  Indexes {
+    contacto_id [name: "indx_contacto"]
+    rol [name: "indx_rol"]
+  }
+}
+
+Table "rol" {
+  "rol" Bigint [pk, not null, increment]
+  "rol_nombre" "Character varying"
+  "rol_desc" "Character varying"
+
+  indexes {
+    rol [pk,name:"id_rol_id"]
+  }
+}
+
+Table "permisos" {
+  "per_id" Bigint [pk, not null, increment]
+  "per_nombre" "Character varying"
+  "per_desc" "Character varying"
+  "per_cod" "Character varying"
+  "per_activo" Boolean [default: true]
+}
+
+Table "rol_permiso" {
+  "per_id" Bigint [not null]
+  "rol" Bigint [not null]
+
+  Indexes {
+    (per_id, rol) [pk, name: "pk_rol_permiso"]
+  }
+}
+
+Table "sistema" {
+  "sis_id" Bigint [not null]
+  "sis_nombre" "Character varying"
+  "sis_descripcion" "Character varying"
+  "estado" bool
+    Indexes {
+    (sis_id) [pk, name: "pk_sistema"]
+  } 
+}
+
+Table "org_sistema" {
+  "sis_id" BigInt
+  "org_id" BigInt
+
+   Indexes {
+    (sis_id, org_id) [pk, name: "pk_sistema_organizacion"]
+  }
+}
+
+Table "modulo_permiso" {
+    "modulo_id" Bigint 
+    "permiso_id" Bigint 
+    Indexes {
+    (modulo_id, permiso_id) [pk, name: "pk_modulo_permiso"]
+  }
+}
+
+table "modulo" {
+  "modulo_id" Bigint
+  "nombre" "Character varying(20)"
+  "descripcion" "Character varying(20)"
+  "estado" bool 
+  "sis_id" bigint
+  Indexes {
+    (modulo_id,sis_id) [pk, name: "pk_modulo-sistema"]
+  } 
+ }
+
+Table "estado_pedido" {
+  "estado_id" Bigint [pk, not null, increment]
+  "estado_nombre" "Character varying(20)"
+  "estado_cod" "Character varying(20)"
+}
+
+Table "size_item" {
+  "size_id" Bigint [pk, not null, increment]
+  "size" "Character varying"
+  "size_orden" Bigint
+}
+
+Table "size_tipo" {
+  "size_id" Bigint [not null]
+  "tipo_id" Bigint [not null]
+
+  Indexes {
+    (size_id, tipo_id) [pk, name: "pk_size_tipo"]
+  }
+}
+
+Table "servicio_tipo" {
+  "tipo_id" Bigint [not null]
+  "servicio_id" Bigint [not null]
+
+  Indexes {
+    (tipo_id, servicio_id) [pk, name: "pk_servicio_tipo"]
+  }
+}
+
+Table "organizacion" {
+  "org_id" Bigint [pk, not null, increment]
+  "org_razon_social" "Character varying"
+  "org_rut" "Character varying"
+  "org_dv" "Character varying(1)"
+  "org_giro" "Character varying"
+  "org_img_logo_base64" "Character varying"
+  "contacto_id" Bigint
+
+  Indexes {
+    contacto_id [name: "ix_cotactoid"]
+  }
+}
+
+Table "cta_cte" {
+  "cta_id" Bigint [pk, not null, increment]
+  "cta_nombre" "Character varying"
+  "cta_banco" "Character varying"
+  "cta_numero" "Character varying"
+  "cta_correo" "Character varying"
+  "cta_rut" "Character varying"
+  "org_id" Bigint
+
+  Indexes {
+    org_id [name: "ix_relationship5"]
+  }
+}
+
+Ref "marca=item":"marca"."marca_id" < "item"."marca_id" [update: no action, delete: no action]
+
+Ref "tipo=item":"tipo"."tipo_id" < "item"."tipo_id" [update: no action, delete: no action]
+
+Ref "cat=item":"categoria"."cat_id" < "item"."cat_id" [update: no action, delete: no action]
+
+Ref "sub_cat=item":"sub_categoria"."sub_cat_id" < "item"."sub_cat_id" [update: no action, delete: no action]
+
+Ref "producto=servicio":"producto"."producto_id" < "prod_serv"."producto_id" [update: no action, delete: no action]
+
+Ref "servicio=producto":"servicio"."servicio_id" < "prod_serv"."servicio_id" [update: no action, delete: no action]
+
+Ref "prod=det_doc":"producto"."producto_id" < "detalle_doc"."producto_id" [update: no action, delete: no action]
+
+Ref "doc=det_doc":"documento"."doc_id" < "detalle_doc"."doc_id" [update: no action, delete: no action]
+
+Ref "tipo_doc=doc":"tipo_doc"."tipo_doc_id" < "documento"."tipo_doc_id" [update: no action, delete: no action]
+
+Ref "tipo=contacto":"tipo_contacto"."tip_con_id" < "contacto"."tip_con_id" [update: no action, delete: no action]
+
+Ref "doc-pedido":"documento"."doc_id" < "pedido"."doc_id" [update: no action, delete: no action]
+
+Ref "usuario-contacto":"contacto"."contacto_id" < "usuario"."contacto_id" [update: no action, delete: no action]
+
+Ref "rol=usuario":"rol"."rol" < "usuario"."rol" [update: no action, delete: no action]
+
+Ref "permiso=rol":"permisos"."per_id" < "rol_permiso"."per_id" [update: no action, delete: no action]
+
+Ref "rol=permiso":"rol"."rol" < "rol_permiso"."rol" [update: no action, delete: no action]
+
+Ref "estadopedido=pedidos":"estado_pedido"."estado_id" < "pedido"."estado_id" [update: no action, delete: no action]
+
+Ref "tipo=categorias":"tipo"."tipo_id" < "categoria"."tipo_id" [update: no action, delete: no action]
+
+Ref "categorias=subcategorias":"categoria"."cat_id" < "sub_categoria"."cat_id" [update: no action, delete: no action]
+
+Ref "size=item":"size_item"."size_id" < "item"."size_id" [update: no action, delete: no action]
+
+Ref "size=tipos":"size_item"."size_id" < "size_tipo"."size_id" [update: no action, delete: no action]
+
+Ref "tipo=size":"tipo"."tipo_id" < "size_tipo"."tipo_id" [update: no action, delete: no action]
+
+Ref "tipo=servicio":"tipo"."tipo_id" < "servicio_tipo"."tipo_id" [update: no action, delete: no action]
+
+Ref "servicio=tipo":"servicio"."servicio_id" < "servicio_tipo"."servicio_id" [update: no action, delete: no action]
+
+Ref "contacto=cliente":"contacto"."contacto_id" < "organizacion"."contacto_id" [update: no action, delete: no action]
+
+Ref "proveedor=item":"organizacion"."org_id" < "item"."org_id" [update: no action, delete: no action]
+
+Ref "org=ctacte":"organizacion"."org_id" < "cta_cte"."org_id" [update: no action, delete: no action]
+
+Ref "org=doc":"organizacion"."org_id" < "documento"."org_id" [update: no action, delete: no action]
+
+ref "modulo_permiso=modulo":"modulo"."modulo_id"<"modulo_permiso"."modulo_id"
+
+Ref "sistema=org_sistema":"sistema"."sis_id" < "org_sistema"."sis_id"  
+
+Ref "org_sistema=organizacion":"organizacion"."org_id" < "org_sistema"."org_id"  
+
+ref "permisos=modulo_permiso": permisos.per_id < modulo_permiso.permiso_id
+
+ref "modulo=sistema": sistema.sis_id < modulo.sis_id
+
+ref "item-costo":item.item_id - costo.item_id

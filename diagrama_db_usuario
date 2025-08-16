@@ -1,0 +1,158 @@
+
+
+Table "contacto" {
+  "contacto_id" BIGINT [pk, not null, increment]
+  "contacto_nombre" "Character varying(50)"
+  "contacto_direccion" "Character varying(50)"
+  "contacto_celular" "Character varying(50)"
+  "contacto_correo" "Character varying(50)"
+  "contacto_rrss" "Character varying(50)"
+  "contacto_url" "Character varying(50)"
+  "contacto_img_base64" "Character varying"
+  "tip_con_id" Bigint
+
+  indexes {
+    (contacto_id,tip_con_id) [pk]
+  }
+}
+
+Table "tipo_contacto" {
+  "tip_con_id" Bigint [pk, not null]
+  "tip_con_nombre" "Character varying(50)"
+  "tip_con_desc" "Character varying(50)"
+}
+
+Table "usuario" {
+  "usuario_id" BIGINT [pk, not null, increment]
+  "usu_username" "Character varying"
+  "usu_password" "Character varying"
+  "usu_creacion" Date
+  "usu_activo" Boolean [default: true]
+  "usu_update" Date
+  "contacto_id" Bigint
+  "rol" Bigint
+  indexes {
+    (usuario_id,rol) [pk]
+  }
+}
+
+Table "rol" {
+  "rol" BIGINT [pk, not null, increment]
+  "rol_nombre" "Character varying"
+  "rol_desc" "Character varying"
+
+  Indexes {
+    rol [pk]
+  }
+}
+
+Table "permisos" {
+  "per_id" BIGINT [pk, not null, increment]
+  "per_nombre" "Character varying"
+  "per_desc" "Character varying"
+  "per_cod" "Character varying"
+  "per_activo" Boolean [default: true]
+  indexes {
+    (per_id) [pk]
+  }
+}
+
+Table "rol_permiso" {
+  "per_id" Bigint [not null]
+  "rol" Bigint [not null]
+
+  Indexes {
+    (per_id, rol) [pk]
+  }
+}
+
+Table "sistema" {
+  "sis_id" Bigint [not null]
+  "sis_nombre" "Character varying"
+  "sis_descripcion" "Character varying"
+  "estado" bool
+
+  Indexes {
+    sis_id [pk]
+  }
+}
+
+Table "org_sistema" {
+  "sis_id" BigInt
+  "org_id" BigInt
+
+  Indexes {
+    (sis_id, org_id) [pk]
+  }
+}
+
+Table "modulo_permiso" {
+  "modulo_id" Bigint
+  "permiso_id" Bigint
+
+  Indexes {
+    (modulo_id, permiso_id) [pk]
+  }
+}
+
+Table "modulo" {
+  "modulo_id" Bigint
+  "nombre" "Character varying(20)"
+  "descripcion" "Character varying(20)"
+  "estado" bool
+  "sis_id" bigint
+
+  Indexes {
+    (modulo_id, sis_id) [pk]
+  }
+}
+
+Table "organizacion" {
+  "org_id" BIGINT 
+  "org_razon_social" "Character varying"
+  "org_rut" "Character varying"
+  "org_dv" "Character varying(1)"
+  "org_giro" "Character varying"
+  "org_img_logo_base64" "Character varying"
+  "contacto_id" Bigint
+
+  indexes {
+    (org_id,contacto_id) [pk]
+  }
+}
+
+Table "cta_cte" {
+  "cta_id" BIGINT 
+  "cta_nombre" "Character varying"
+  "cta_banco" "Character varying"
+  "cta_numero" "Character varying"
+  "cta_correo" "Character varying"
+  "cta_rut" "Character varying"
+  "org_id" Bigint 
+
+  Indexes {
+    (cta_id,org_id) [pk]
+  }
+} 
+
+Ref "usuario-contacto":"contacto"."contacto_id" < "usuario"."contacto_id" [update: no action, delete: no action]
+
+Ref "rol=usuario":"rol"."rol" < "usuario"."rol" [update: no action, delete: no action]
+
+Ref "permiso=rol":"permisos"."per_id" < "rol_permiso"."per_id" [update: no action, delete: no action]
+
+Ref "rol=permiso":"rol"."rol" < "rol_permiso"."rol" [update: no action, delete: no action]
+
+Ref "modulo_permiso=modulo":"modulo"."modulo_id" < "modulo_permiso"."modulo_id"
+
+Ref "sistema=org_sistema":"sistema"."sis_id" < "org_sistema"."sis_id"
+
+Ref "org_sistema=organizacion":"organizacion"."org_id" < "org_sistema"."org_id"
+
+Ref "permisos=modulo_permiso":"permisos"."per_id" < "modulo_permiso"."permiso_id"
+
+Ref "modulo=sistema":"sistema"."sis_id" < "modulo"."sis_id"
+
+Ref "tipo=contacto":"tipo_contacto"."tip_con_id" < "contacto"."tip_con_id" [update: no action, delete: no action]
+Ref "contacto=cliente":"contacto"."contacto_id" < "organizacion"."contacto_id" [update: no action, delete: no action]
+Ref "org=ctacte":"organizacion"."org_id" < "cta_cte"."org_id" [update: no action, delete: no action]
