@@ -1,19 +1,3 @@
-Table "usuario" {
-  "usuario_id" Bigint [pk, not null, increment]
-  "usu_username" "Character varying"
-  "usu_password" "Character varying"
-  "usu_creacion" Date
-  "usu_activo" Boolean [default: true]
-  "usu_update" Date
-  "contacto_id" Bigint
-  "rol" Bigint
-
-  Indexes {
-    contacto_id [name: "indx_contacto"]
-    rol [name: "indx_rol"]
-  }
-}
-
 Table "item" {
   "item_id" Bigint [pk, not null, increment]
   "item_nombre" "Character varying(50)"
@@ -115,6 +99,22 @@ Table "tipo_movimiento" {
   "afecta_stock" BOOLEAN [not null]
 }
 
+Table "usuario" {
+  "usuario_id" Bigint [pk, not null, increment]
+  "usu_username" "Character varying"
+  "usu_password" "Character varying"
+  "usu_creacion" Date
+  "usu_activo" Boolean [default: true]
+  "usu_update" Date
+  "contacto_id" Bigint
+  "rol" Bigint
+
+  Indexes {
+    contacto_id [name: "indx_contacto"]
+    rol [name: "indx_rol"]
+  }
+}
+
 Table "movimiento" {
   "id" BIGSERIAL [pk, increment]
   "item_id" BIGINT [not null]
@@ -157,26 +157,19 @@ Table "ajuste_inventario" {
 
 Ref:"ubicacion"."id" < "stock"."ubicacion_id" [delete: cascade]
 
-Ref "item>movimiento": "item"."item_id" < "movimiento"."item_id"
-
-Ref "item<stock":"item"."item_id"<"stock"."item_id"
-
-Ref "item<ajuste_inventario":"item"."item_id"< "ajuste_inventario"."item_id"
-
 Ref:"tipo_movimiento"."id" < "movimiento"."tipo_movimiento_id"
 
 Ref:"ubicacion"."id" < "movimiento"."ubicacion_origen_id"
 
 Ref:"ubicacion"."id" < "movimiento"."ubicacion_destino_id"
 
-Ref:"usuario"."usuario_id" < "movimiento"."usuario_id" [delete: set null]
+Ref:"usuario".usuario_id < "movimiento"."usuario_id" [delete: set null]
 
-Ref:"usuario"."usuario_id" < "inventario_fisico"."usuario_id" [delete: set null]
+Ref:"usuario".usuario_id < "inventario_fisico"."usuario_id" [delete: set null]
 
 Ref:"inventario_fisico"."id" < "ajuste_inventario"."inventario_fisico_id" [delete: cascade]
 
 Ref:"ubicacion"."id" < "ajuste_inventario"."ubicacion_id"
-
 
 Ref "marca=item":"marca"."marca_id" < "item"."marca_id" [update: no action, delete: no action]
 
@@ -196,3 +189,8 @@ Ref "size=tipos":"size_item"."size_id" < "size_tipo"."size_id" [update: no actio
 
 Ref "tipo=size":"tipo"."tipo_id" < "size_tipo"."tipo_id" [update: no action, delete: no action]
 
+ref "item>movimiento": item.item_id < movimiento.item_id
+
+ref "item<stock":item.item_id<stock.item_id
+
+ref "item<ajuste_inventario":item.item_id< ajuste_inventario.item_id
