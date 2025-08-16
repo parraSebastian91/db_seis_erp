@@ -189,8 +189,8 @@ Ref "size=tipos":"size_item"."size_id" < "size_tipo"."size_id" [update: no actio
 
 Ref "tipo=size":"tipo"."tipo_id" < "size_tipo"."tipo_id" [update: no action, delete: no action]
 
-ref "item>movimiento": item.item_id < movimiento.item_id
+Ref "item>movimiento": "item"."item_id" < "movimiento"."item_id"
 
-ref "item<stock":item.item_id<stock.item_id
+Ref "item<stock":"item"."item_id"< "stock"."item_id"
 
-ref "item<ajuste_inventario":item.item_id< ajuste_inventario.item_id
+Ref "item<ajuste_inventario":"item"."item_id"< "ajuste_inventario"."item_id"
