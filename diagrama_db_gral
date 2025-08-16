@@ -301,6 +301,73 @@ Table "cta_cte" {
   }
 }
 
+Table "ubicacion" {
+  "id" BIGSERIAL [pk, increment]
+  "nombre" TEXT [not null]
+  "descripcion" TEXT
+  "tipo" TEXT
+  "pasillo" TEXT
+  "rack" TEXT
+  "estante" TEXT
+}
+
+Table "stock" {
+  "item_id" BIGINT [not null]
+  "ubicacion_id" BIGINT [not null]
+  "cantidad" NUMERIC(12,2) [not null, default: 0]
+
+  Indexes {
+    (item_id, ubicacion_id) [pk]
+    item_id [name: "idx_stock_item"]
+    ubicacion_id [name: "idx_stock_ubicacion"]
+  }
+}
+
+Table "tipo_movimiento" {
+  "id" BIGSERIAL [pk, increment]
+  "nombre" TEXT [unique, not null]
+  "afecta_stock" BOOLEAN [not null]
+}
+
+Table "movimiento" {
+  "id" BIGSERIAL [pk, increment]
+  "item_id" BIGINT [not null]
+  "tipo_movimiento_id" BIGINT [not null]
+  "cantidad" NUMERIC(12,2) [not null]
+  "fecha" TIMESTAMPTZ [not null, default: `now()`]
+  "ubicacion_origen_id" BIGINT
+  "ubicacion_destino_id" BIGINT
+  "motivo" TEXT
+  "usuario_id" BIGINT
+
+  Indexes {
+    item_id [name: "idx_movimiento_item"]
+    fecha [name: "idx_movimiento_fecha"]
+    usuario_id [name: "idx_movimiento_usuario"]
+  }
+}
+
+Table "inventario_fisico" {
+  "id" BIGSERIAL [pk, increment]
+  "fecha" TIMESTAMPTZ [not null, default: `now()`]
+  "observaciones" TEXT
+  "usuario_id" BIGINT
+}
+
+Table "ajuste_inventario" {
+  "id" BIGSERIAL [pk, increment]
+  "inventario_fisico_id" BIGINT [not null]
+  "item_id" BIGINT [not null]
+  "ubicacion_id" BIGINT [not null]
+  "stock_actual" NUMERIC(12,2) [not null]
+  "stock_fisico" NUMERIC(12,2) [not null]
+  "diferencia" NUMERIC(12,2)
+
+  Indexes {
+    item_id [name: "idx_ajuste_item"]
+  }
+}
+
 Ref "marca=item":"marca"."marca_id" < "item"."marca_id" [update: no action, delete: no action]
 
 Ref "tipo=item":"tipo"."tipo_id" < "item"."tipo_id" [update: no action, delete: no action]
@@ -366,3 +433,25 @@ ref "permisos=modulo_permiso": permisos.per_id < modulo_permiso.permiso_id
 ref "modulo=sistema": sistema.sis_id < modulo.sis_id
 
 ref "item-costo":item.item_id - costo.item_id
+
+Ref:"ubicacion"."id" < "stock"."ubicacion_id" [delete: cascade]
+
+Ref "item>movimiento": "item"."item_id" < "movimiento"."item_id"
+
+Ref "item<stock":"item"."item_id"<"stock"."item_id"
+
+Ref "item<ajuste_inventario":"item"."item_id"< "ajuste_inventario"."item_id"
+
+Ref:"tipo_movimiento"."id" < "movimiento"."tipo_movimiento_id"
+
+Ref:"ubicacion"."id" < "movimiento"."ubicacion_origen_id"
+
+Ref:"ubicacion"."id" < "movimiento"."ubicacion_destino_id"
+
+Ref:"usuario"."usuario_id" < "movimiento"."usuario_id" [delete: set null]
+
+Ref:"usuario"."usuario_id" < "inventario_fisico"."usuario_id" [delete: set null]
+
+Ref:"inventario_fisico"."id" < "ajuste_inventario"."inventario_fisico_id" [delete: cascade]
+
+Ref:"ubicacion"."id" < "ajuste_inventario"."ubicacion_id"
