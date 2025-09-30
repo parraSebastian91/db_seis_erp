@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: core_erp
       POSTGRES_USER: desarrollo
-      POSTGRES_PASSWORD: desarrollo123
+      POSTGRES_PASSWORD: 071127
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
