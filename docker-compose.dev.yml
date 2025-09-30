@@ -1,0 +1,31 @@
+# Configuración adicional para desarrollo
+version: '3.8'
+
+services:
+  postgres:
+    environment:
+      # Habilitar logging extendido para desarrollo
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    # Mapear puerto adicional para depuración
+    # ports:
+    #   - "5433:5432"  # Puerto alternativo si 5432 está ocupado
+    
+  redis:
+    # Configuración adicional para desarrollo
+    environment:
+      REDIS_ARGS: "--loglevel verbose"
+    # ports:
+    #   - "6380:6379"  # Puerto alternativo si 6379 está ocupado
+
+  # Servicio adicional para desarrollo: Adminer (alternativa ligera a PgAdmin)
+  adminer:
+    image: adminer:latest
+    container_name: seis_erp_adminer
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    networks:
+      - erp_network
+    depends_on:
+      postgres:
+        condition: service_healthy

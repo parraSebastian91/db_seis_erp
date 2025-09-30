@@ -1,45 +1,90 @@
-services:
-  # Aplicación NestJS
+version: '3.8'
 
+services:
   postgres:
     image: postgres:15
-    container_name: core_erp_postgres
-    restart: always
+    container_name: seis_erp_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: core_erp
       POSTGRES_USER: desarrollo
-      POSTGRES_PASSWORD: 071127
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_PASSWORD: desarrollo123
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
     networks:
-      - core_erp_network
+      - erp_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U desarrollo -d core_erp"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
 
   redis:
     image: redis:7-alpine
-    container_name: core_erp_redis
-    restart: always
+    container_name: seis_erp_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
     networks:
-      - core_erp_network
+      - erp_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
+
+  # Opcional: Herramienta de administración de base de datos
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: seis_erp_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@seiserp.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - erp_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Opcional: Herramienta de administración de Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: seis_erp_redis_commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - erp_network
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
 
 networks:
-  core_erp_network:
+  erp_network:
     driver: bridge
