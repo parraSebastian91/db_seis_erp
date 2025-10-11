@@ -131,6 +131,34 @@ CREATE TABLE core.organizacion_contacto (
   PRIMARY KEY (contacto_id, organizacion_id)
 );
 
+-- Crear tabla de sesiones de refresh
+CREATE TABLE IF NOT EXISTS auth_refresh_sessions (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL,
+  device_type VARCHAR(30) NOT NULL,
+  device_fingerprint VARCHAR(128),
+  refresh_token_hash VARCHAR(255) NOT NULL,
+  ip VARCHAR(64),
+  user_agent TEXT,
+  expires_at TIMESTAMPTZ NOT NULL,
+  last_used_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  rotation_parent_id BIGINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT fk_auth_refresh_sessions_user
+    FOREIGN KEY (user_id)
+    REFERENCES usuario (usuario_id)
+    ON DELETE CASCADE
+);
+
+-- Índices recomendados
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_user_id ON auth_refresh_sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_expires_at ON auth_refresh_sessions (expires_at);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_device_user ON auth_refresh_sessions (device_type, user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_rotation_parent ON auth_refresh_sessions (rotation_parent_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_token_hash ON auth_refresh_sessions (refresh_token_hash);
+
 -- Foreign Keys
 ALTER TABLE core.contacto ADD FOREIGN KEY (tipo_contacto_id) REFERENCES core.tipo_contacto (tipo_contacto_id);
 
