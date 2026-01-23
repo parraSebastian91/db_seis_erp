@@ -233,7 +233,7 @@ INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
 (5, 12, 1), (5, 12, 2), (5, 12, 3), (5, 12, 5), (5, 12, 9);
 
 -- Jefe de RRHH
-INSERT INTO core. rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
 (6, 7, 1), (6, 7, 2), (6, 7, 3), (6, 7, 4), (6, 7, 5),
 (6, 8, 1), (6, 8, 2), (6, 8, 3), (6, 8, 5), (6, 8, 7),
 (6, 9, 1), (6, 9, 2), (6, 9, 3), (6, 9, 5);
@@ -244,7 +244,7 @@ INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
 (7, 8, 2); -- Ver nómina
 
 -- Jefe de Bodega
-INSERT INTO core. rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
 (8, 13, 1), (8, 13, 2), (8, 13, 3), (8, 13, 5),
 (8, 14, 1), (8, 14, 2), (8, 14, 3), (8, 14, 5),
 (8, 15, 1), (8, 15, 2), (8, 15, 3), (8, 15, 5), (8, 15, 7);
@@ -266,7 +266,7 @@ WHERE m.activo = true;
 -- ============================================
 -- Contraseña: "Password123!" hasheada con bcrypt
 INSERT INTO core.usuario (username, password_hash, fecha_creacion, activo, contacto_id) VALUES
-('sparra', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '2025-01-15', true, 1),
+('sparra', '$2a$12$loT1eJ6.iwUCFg2/ajCu9O944h4j5LyiEYMrAwkCGcYoJinn2wC7W', '2025-01-15', true, 1),
 ('jperez', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '2025-01-15', true, 1),
 ('mgonzalez', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '2025-01-20', true, 2),
 ('amartinez', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '2025-02-01', true, 6),
@@ -281,7 +281,7 @@ INSERT INTO core.usuario (username, password_hash, fecha_creacion, activo, conta
 -- ============================================
 -- 14. USUARIO_ROL
 -- ============================================
-INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES
+INSERT INTO core.usuario_rol(usuario_id, rol_id) VALUES
 (1, 1), -- admin es Administrador del Sistema
 (2, 2), -- jperez es Gerente General
 (2, 4), -- jperez también es Jefe de Ventas

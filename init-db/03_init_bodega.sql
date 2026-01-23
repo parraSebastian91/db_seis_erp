@@ -1,6 +1,6 @@
 -- DROP SCHEMA bodega;
 
-CREATE SCHEMA bodega AUTHORIZATION postgres;
+CREATE SCHEMA bodega AUTHORIZATION desarrollo;
 
 -- DROP SEQUENCE ajuste_inventario_id_seq;
 
