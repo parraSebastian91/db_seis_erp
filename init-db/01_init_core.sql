@@ -135,10 +135,10 @@ CREATE TABLE core.organizacion_contacto (
   PRIMARY KEY (contacto_id, organizacion_id)
 );
 
--- Crear tabla de sesiones de refresh
 CREATE TABLE IF NOT EXISTS auth_refresh_sessions (
   id BIGSERIAL PRIMARY KEY,
   session_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+  session_id VARCHAR(128) UNIQUE NOT NULL,
   user_id BIGINT NOT NULL,
   device_type VARCHAR(30) NOT NULL,
   device_fingerprint VARCHAR(128),
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS auth_refresh_sessions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT fk_auth_refresh_sessions_user
     FOREIGN KEY (user_id)
-    REFERENCES usuario (usuario_id)
+    REFERENCES core.usuario (usuario_id)
     ON DELETE CASCADE
 );
 
