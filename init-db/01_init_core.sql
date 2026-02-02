@@ -164,6 +164,30 @@ CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_device_user ON auth_refresh
 CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_rotation_parent ON auth_refresh_sessions (rotation_parent_id);
 CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_token_hash ON auth_refresh_sessions (refresh_token_hash);
 
+CREATE TABLE IF NOT EXISTS core.password_reset_tokens (
+  id BIGSERIAL PRIMARY KEY,
+  token_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  user_id BIGINT NOT NULL,
+  email VARCHAR(100) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  ip_address VARCHAR(64),
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT fk_password_reset_user
+    FOREIGN KEY (user_id)
+    REFERENCES core.usuario (usuario_id)
+    ON DELETE CASCADE
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON core.password_reset_tokens (token_hash);
+CREATE INDEX IF NOT EXISTS idx_password_reset_user_id ON core.password_reset_tokens (user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_expires_at ON core.password_reset_tokens (expires_at);
+CREATE INDEX IF NOT EXISTS idx_password_reset_email ON core.password_reset_tokens (email);
+
+
 -- Foreign Keys
 ALTER TABLE core.contacto ADD FOREIGN KEY (tipo_contacto_id) REFERENCES core.tipo_contacto (tipo_contacto_id);
 
