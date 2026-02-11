@@ -13,7 +13,6 @@ Table "contacto" {
   "correo" VARCHAR(50)
   "redes_sociales" VARCHAR(50)
   "url" VARCHAR(50)
-  "imagen_base64" TEXT
   "tipo_contacto_id" BIGINT
 }
 
