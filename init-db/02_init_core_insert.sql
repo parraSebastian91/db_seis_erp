@@ -26,7 +26,7 @@ SET search_path TO core, public;
 -- RESTART IDENTITY CASCADE;
 
 -- ============================================
--- 1) TIPOS DE CONTACTO
+-- 1) TIPOS 
 -- ============================================
 INSERT INTO core.tipo_contacto (tipo_contacto_id, nombre, descripcion) VALUES
 (1, 'Personal', 'Contacto de persona natural'),
@@ -35,6 +35,14 @@ INSERT INTO core.tipo_contacto (tipo_contacto_id, nombre, descripcion) VALUES
 (4, 'Cliente', 'Contacto de cliente'),
 (5, 'Empleado', 'Contacto de empleado')
 ON CONFLICT (tipo_contacto_id) DO NOTHING;
+
+INSERT INTO core.tipo_direccion_organizacion (codigo, nombre) VALUES
+('TRIBUTARIA',  'Dirección Tributaria'),
+('CASA_MATRIZ', 'Casa Matriz'),
+('SUCURSAL',    'Sucursal'),
+('BODEGA',      'Bodega'),
+('ATENCION',    'Punto de Atención')
+ON CONFLICT (codigo) DO NOTHING;
 
 -- ============================================
 -- 2) CONTACTOS (nueva estructura: nombres/apellidos, sin url)
@@ -54,6 +62,56 @@ INSERT INTO core.contacto (
 (9, 'Constructora Norte', NULL, NULL, 'Huérfanos 1234, Santiago Centro', '+56227890123', 'contacto@norte.cl', '{}'::jsonb, 4),
 (10,'Pedro',  'Silva',     NULL, 'San Miguel 789, Santiago', '+56965432109', 'pedro.silva@email.com', '{}'::jsonb, 2)
 ON CONFLICT (contacto_id) DO NOTHING;
+
+WITH direcciones(org_id, tipo_codigo, calle, numero, depto_oficina, comuna, ciudad, region, codigo_postal, pais, referencia, es_principal, activo) AS (
+    VALUES
+    -- Organización 1
+    (1, 'TRIBUTARIA',  'Av. Libertador Bernardo O''Higgins', '1234', NULL, 'Santiago', 'Santiago', 'RM', '8320000', 'CL', 'Oficina contabilidad', true,  true),
+    (1, 'CASA_MATRIZ', 'Av. Apoquindo',                        '4501', 'Piso 12', 'Las Condes', 'Santiago', 'RM', '7550000', 'CL', 'Torre A',               true,  true),
+    (1, 'BODEGA',      'Camino Lo Boza',                       '980',  NULL, 'Pudahuel', 'Santiago', 'RM', '9020000', 'CL', 'Centro logístico',         true,  true),
+    (1, 'ATENCION',    'Providencia',                          '2100', NULL, 'Providencia', 'Santiago', 'RM', '7500000', 'CL', 'Sucursal atención',       true,  true),
+
+    -- Organización 2
+    (2, 'TRIBUTARIA',  'Calle Blanco',                         '456',  NULL, 'Valparaíso', 'Valparaíso', 'Valparaíso', '2340000', 'CL', NULL, true, true),
+    (2, 'CASA_MATRIZ', 'Av. Argentina',                        '789',  NULL, 'Valparaíso', 'Valparaíso', 'Valparaíso', '2340000', 'CL', NULL, true, true),
+    (2, 'BODEGA',      'Ruta 68 KM 92',                        NULL,   NULL, 'Casablanca', 'Valparaíso', 'Valparaíso', '2480000', 'CL', 'Bodega principal', true, true),
+
+    -- Organización 3
+    (3, 'TRIBUTARIA',  'Av. Pedro Aguirre Cerda',              '1500', NULL, 'San Miguel', 'Santiago', 'RM', '8900000', 'CL', NULL, true, true),
+    (3, 'CASA_MATRIZ', 'Av. Pedro de Valdivia',                '999',  'Of. 401', 'Providencia', 'Santiago', 'RM', '7500000', 'CL', NULL, true, true),
+    (3, 'SUCURSAL',    'Av. España',                           '320',  NULL, 'Concepción', 'Concepción', 'Biobío', '4030000', 'CL', NULL, true, true),
+
+    -- Organización 4
+    (4, 'TRIBUTARIA',  'Nueva de Lyon',                        '145',  'Of. 602', 'Providencia', 'Santiago', 'RM', '7500000', 'CL', NULL, true, true),
+    (4, 'CASA_MATRIZ', 'Avenida Vitacura',                     '2800', NULL, 'Vitacura', 'Santiago', 'RM', '7630000', 'CL', NULL, true, true),
+    (4, 'ATENCION',    'Av. Irarrázaval',                      '5400', NULL, 'Ñuñoa', 'Santiago', 'RM', '7760000', 'CL', 'Mesa de ayuda', true, true),
+
+    -- Organización 5
+    (5, 'TRIBUTARIA',  'Av. Matta',                            '2210', NULL, 'Santiago', 'Santiago', 'RM', '8330000', 'CL', NULL, true, true),
+    (5, 'BODEGA',      'Panamericana Norte KM 12',             NULL,   NULL, 'Quilicura', 'Santiago', 'RM', '8700000', 'CL', 'Patio de carga', true, true)
+)
+INSERT INTO core.organizacion_direccion (
+    organizacion_id, tipo_direccion_id, calle, numero, depto_oficina, comuna, ciudad, region,
+    codigo_postal, pais, referencia, es_principal, activo
+)
+SELECT
+    d.org_id,
+    t.tipo_direccion_id,
+    d.calle, d.numero, d.depto_oficina, d.comuna, d.ciudad, d.region,
+    d.codigo_postal, d.pais, d.referencia, d.es_principal, d.activo
+FROM direcciones d
+JOIN core.organizacion o
+  ON o.organizacion_id = d.org_id
+JOIN core.tipo_direccion_organizacion t
+  ON t.codigo = d.tipo_codigo
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM core.organizacion_direccion od
+    WHERE od.organizacion_id = d.org_id
+      AND od.tipo_direccion_id = t.tipo_direccion_id
+      AND od.calle = d.calle
+      AND COALESCE(od.numero, '') = COALESCE(d.numero, '')
+);
 
 -- ============================================
 -- 3) ORGANIZACIONES (sin contacto_id en esta tabla)
