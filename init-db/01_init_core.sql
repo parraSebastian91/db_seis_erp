@@ -225,12 +225,32 @@ CREATE TABLE core.cuenta_bancaria (
 
 CREATE TABLE core.auth_refresh_sessions (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES core.usuario(usuario_id) ON DELETE CASCADE,
+    session_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+    user_id BIGINT NOT NULL,
     device_type VARCHAR(30) NOT NULL,
-    refresh_token_hash TEXT NOT NULL,
+    device_fingerprint VARCHAR(128),
+    refresh_token_hash VARCHAR(255) NOT NULL,
+    ip VARCHAR(64),
+    user_agent TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
+    last_used_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
+    rotation_parent_id BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_auth_refresh_sessions_user
+    FOREIGN KEY (user_id)
+    REFERENCES core.usuario (usuario_id)
+    ON DELETE CASCADE
 );
+
+-- Índices recomendados
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_user_id ON auth_refresh_sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_expires_at ON auth_refresh_sessions (expires_at);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_device_user ON auth_refresh_sessions (device_type, user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_rotation_parent ON auth_refresh_sessions (rotation_parent_id);
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_token_hash ON auth_refresh_sessions (refresh_token_hash);
+
 
 -- 8. AUDITORÍA Y VALIDACIONES (TRIGGERS)
 CREATE OR REPLACE FUNCTION core.tr_update_timestamp() RETURNS TRIGGER AS $$
