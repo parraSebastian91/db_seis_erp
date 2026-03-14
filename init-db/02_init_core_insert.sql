@@ -203,34 +203,34 @@ ON CONFLICT (organizacion_id, sistema_id) DO NOTHING;
 -- ============================================
 -- 7) RBAC (estructura actual: rol(nombre,codigo) y permiso(per_nombre,per_cod))
 -- ============================================
-INSERT INTO core.permiso (permiso_id, per_nombre, per_cod) VALUES
-(1,'Ver Usuarios','USR_VIEW'),
-(2,'Crear Usuarios','USR_CREATE'),
-(3,'Editar Usuarios','USR_EDIT'),
-(4,'Eliminar Usuarios','USR_DELETE'),
-(5,'Ver Contactos','CNT_VIEW'),
-(6,'Crear Contactos','CNT_CREATE'),
-(7,'Editar Contactos','CNT_EDIT'),
-(8,'Eliminar Contactos','CNT_DELETE'),
-(9,'Ver Organizaciones','ORG_VIEW'),
-(10,'Administrar Sistema','SYS_ADMIN'),
-(11,'Ver Bodegas','BDG_VIEW'),
-(12,'Crear Bodegas','BDG_CREATE'),
-(13,'Editar Bodegas','BDG_EDIT'),
-(14,'Eliminar Bodegas','BDG_DELETE'),
-(15,'Crear Item','ITM_CREATE'),
-(16,'Ver Item','ITM_VIEW'),
-(17,'Editar Item','ITM_EDIT'),
-(18,'Eliminar Item','ITM_DELETE'),
-(19,'Leer Menu','MENU_VIEW')
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo) VALUES
+(1,'Ver Usuarios','USR_VIEW','Permiso para ver usuarios', true),
+(2,'Crear Usuarios','USR_CREATE','Permiso para crear usuarios', true),
+(3,'Editar Usuarios','USR_EDIT','Permiso para editar usuarios', true),
+(4,'Eliminar Usuarios','USR_DELETE','Permiso para eliminar usuarios', true),
+(5,'Ver Contactos','CNT_VIEW','Permiso para ver contactos', true),
+(6,'Crear Contactos','CNT_CREATE','Permiso para crear contactos', true),
+(7,'Editar Contactos','CNT_EDIT','Permiso para editar contactos', true),
+(8,'Eliminar Contactos','CNT_DELETE','Permiso para eliminar contactos', true),
+(9,'Ver Organizaciones','ORG_VIEW','Permiso para ver organizaciones', true),
+(10,'Administrar Sistema','SYS_ADMIN','Permiso para administrar el sistema', true),
+(11,'Ver Bodegas','BDG_VIEW','Permiso para ver bodegas', true),
+(12,'Crear Bodegas','BDG_CREATE','Permiso para crear bodegas', true),
+(13,'Editar Bodegas','BDG_EDIT','Permiso para editar bodegas', true),
+(14,'Eliminar Bodegas','BDG_DELETE','Permiso para eliminar bodegas', true),
+(15,'Crear Item','ITM_CREATE','Permiso para crear ítems', true),
+(16,'Ver Item','ITM_VIEW','Permiso para ver ítems', true),
+(17,'Editar Item','ITM_EDIT','Permiso para editar ítems', true),
+(18,'Eliminar Item','ITM_DELETE','Permiso para eliminar ítems', true),
+(19,'Leer Menu','MENU_VIEW','Permiso para leer el menú', true)
 ON CONFLICT (permiso_id) DO NOTHING;
 
-INSERT INTO core.rol (rol_id, nombre, codigo) VALUES
-(1, 'Super Administrador', 'SUPER_ADMIN'),
-(2, 'Administrador', 'ADMIN'),
-(3, 'Usuario Estándar', 'USR_STD'),
-(4, 'Supervisor', 'SUPERVISOR'),
-(5, 'Solo Lectura', 'READ_ONLY')
+INSERT INTO core.rol (rol_id, nombre, codigo, descripcion) VALUES
+(1, 'Super Administrador', 'SUPER_ADMIN', 'Rol con acceso total'),
+(2, 'Administrador', 'ADMIN', 'Rol con permisos de administración'),
+(3, 'Usuario Estándar', 'USR_STD', 'Rol con permisos estándar'),
+(4, 'Supervisor', 'SUPERVISOR', 'Rol con permisos de supervisión'),
+(5, 'Solo Lectura', 'READ_ONLY', 'Rol con permisos de solo lectura')
 ON CONFLICT (rol_id) DO NOTHING;
 
 -- Super Administrador: acceso total
