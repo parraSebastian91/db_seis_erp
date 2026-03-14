@@ -229,6 +229,7 @@ CREATE TABLE core.cuenta_bancaria (
 CREATE TABLE core.auth_refresh_sessions (
     id BIGSERIAL PRIMARY KEY,
     session_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+    session_id VARCHAR(255) NOT NULL,
     user_id BIGINT NOT NULL,
     device_type VARCHAR(30) NOT NULL,
     device_fingerprint VARCHAR(128),
