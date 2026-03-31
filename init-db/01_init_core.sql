@@ -137,6 +137,7 @@ CREATE TABLE core.grupo_trabajo (
     lider_usuario_id BIGINT REFERENCES core.usuario(usuario_id), -- Jefe del grupo
     organizacion_id BIGINT NOT NULL REFERENCES core.organizacion(organizacion_id) ON DELETE CASCADE,
     activo BOOLEAN DEFAULT true,
+    grupo_metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -157,7 +158,8 @@ CREATE TABLE core.sistema (
     nombre VARCHAR(100) NOT NULL,
     path VARCHAR(100),
     descripcion TEXT,
-    activo BOOLEAN DEFAULT true
+    activo BOOLEAN DEFAULT true,
+    icono VARCHAR(50) NULL
 );
 
 -- Relación N:N Organizaciones <-> Sistemas
@@ -175,6 +177,7 @@ CREATE TABLE core.modulo (
     descripcion TEXT,
     activo BOOLEAN DEFAULT true,
     sistema_id BIGINT REFERENCES core.sistema(sistema_id)
+    icono VARCHAR(50) NULL
 );
 
 CREATE TABLE core.funcionalidad (
@@ -184,6 +187,7 @@ CREATE TABLE core.funcionalidad (
     path VARCHAR(150),
     modulo_id BIGINT NOT NULL REFERENCES core.modulo(modulo_id),
     activo BOOLEAN DEFAULT true
+    icono VARCHAR(50) NULL
 );
 
 -- 6. CONTROL DE ACCESO (RBAC)
@@ -265,7 +269,7 @@ CREATE TABLE IF NOT EXISTS core.password_reset_tokens (
     ON DELETE CASCADE
 );
 
--- Índices recomendados
+-- Índices
 CREATE INDEX IF NOT EXISTS idx_password_reset_token_hash ON core.password_reset_tokens (token_hash);
 CREATE INDEX IF NOT EXISTS idx_password_reset_user_id ON core.password_reset_tokens (user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_expires_at ON core.password_reset_tokens (expires_at);
@@ -277,6 +281,20 @@ CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_device_user ON auth_refresh
 CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_rotation_parent ON auth_refresh_sessions (rotation_parent_id);
 CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_token_hash ON auth_refresh_sessions (refresh_token_hash);
 
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_user_id
+ON core.auth_refresh_sessions (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_expires_at
+ON core.auth_refresh_sessions (expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_device_user
+ON core.auth_refresh_sessions (device_type, user_id);
+
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_rotation_parent
+ON core.auth_refresh_sessions (rotation_parent_id);
+
+CREATE INDEX IF NOT EXISTS idx_auth_refresh_sessions_token_hash
+ON core.auth_refresh_sessions (refresh_token_hash);
 
 -- 8. AUDITORÍA Y VALIDACIONES (TRIGGERS)
 CREATE OR REPLACE FUNCTION core.tr_update_timestamp() RETURNS TRIGGER AS $$

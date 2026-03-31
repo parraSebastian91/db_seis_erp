@@ -51,7 +51,7 @@ INSERT INTO core.contacto (
   contacto_id, nombres, apellido_paterno, apellido_materno,
   direccion, celular, correo, redes_sociales, tipo_contacto_id
 ) VALUES
-(1, 'Juan',   'Pérez',     NULL, 'Av. Libertador 1234, Santiago', '+56912345678', 'juan.perez@email.com', '{"twitter":"@juanp","linkedin":"juanperez"}', 2),
+(1, 'Sebastian',   'Parra',     NULL, 'Av. Libertador 1234, Santiago', '+56912345678', 'parra.sebastian91@gmail.com', '{"twitter":"@juanp","linkedin":"juanperez"}', 2),
 (2, 'María',  'González',  NULL, 'Calle Principal 567, Valparaíso', '+56987654321', 'maria.gonzalez@email.com', '{"instagram":"@mariag"}', 2),
 (3, 'TechSupply SpA', NULL, NULL, 'Av. Apoquindo 3000, Las Condes', '+56223456789', 'contacto@techsupply.cl', '{"linkedin":"techsupply"}', 3),
 (4, 'Distribuidora Los Andes', NULL, NULL, 'Los Carrera 890, Maipú', '+56224567890', 'ventas@losandes.cl', '{}'::jsonb, 3),
@@ -158,12 +158,13 @@ INSERT INTO core.cuenta_bancaria (organizacion_id, nombre_titular, rut_titular, 
 -- ============================================
 -- 6) SISTEMAS / MÓDULOS / FUNCIONALIDADES
 -- ============================================
-INSERT INTO core.sistema (sistema_id, nombre, path, descripcion, activo) VALUES
-(1, 'ERP Core', '/erp', 'Sistema central ERP', true),
-(2, 'CRM', '/crm', 'Gestión de clientes', true),
-(3, 'HRM', '/hrm', 'Recursos humanos', true),
-(4, 'Finanzas', '/finance', 'Gestión financiera', true),
-(5, 'Inventario', '/inventory', 'Gestión de inventarios', true)
+
+INSERT INTO core.sistema (sistema_id, nombre, path, descripcion, activo, icono) VALUES
+(1, 'ERP Core', '/erp', 'Sistema central ERP', true, 'bolt'),
+(2, 'CRM', '/crm', 'Gestión de clientes', true, 'key'),
+(3, 'HRM', '/hrm', 'Recursos humanos', true, 'restart_alt'),
+(4, 'Finanzas', '/finance', 'Gestión financiera', true, 'star_half'),
+(5, 'Inventario', '/inventory', 'Gestión de inventarios', true, 'fullscreen_exit')
 ON CONFLICT (sistema_id) DO NOTHING;
 
 INSERT INTO core.modulo (modulo_id, nombre, path, descripcion, activo, sistema_id) VALUES
