@@ -176,7 +176,7 @@ CREATE TABLE core.modulo (
     path VARCHAR(100),
     descripcion TEXT,
     activo BOOLEAN DEFAULT true,
-    sistema_id BIGINT REFERENCES core.sistema(sistema_id)
+    sistema_id BIGINT REFERENCES core.sistema(sistema_id),
     icono VARCHAR(50) NULL
 );
 
@@ -186,7 +186,7 @@ CREATE TABLE core.funcionalidad (
     descripcion TEXT,
     path VARCHAR(150),
     modulo_id BIGINT NOT NULL REFERENCES core.modulo(modulo_id),
-    activo BOOLEAN DEFAULT true
+    activo BOOLEAN DEFAULT true,
     icono VARCHAR(50) NULL
 );
 
