@@ -30,7 +30,6 @@ CREATE TABLE core.contacto (
     fecha_nacimiento DATE,
 
     redes_sociales JSONB DEFAULT '{}'::jsonb,
-    logo_metadata JSONB DEFAULT '{}'::jsonb,
     tipo_contacto_id BIGINT REFERENCES core.tipo_contacto(tipo_contacto_id),
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
@@ -44,6 +43,13 @@ CREATE TABLE core.contacto (
             (tipo_documento IS NULL AND numero_documento IS NULL) OR
             (tipo_documento IS NOT NULL AND numero_documento IS NOT NULL)
         )
+);
+
+CREATE TABLE core.avatar_attachments (
+    usuario_id UUID REFERENCES core.usuario(usuario_uuid),
+    media_id UUID REFERENCES media.media_assets(id),
+    sort_order INT,
+    PRIMARY KEY (usuario_id, media_id)
 );
 
 CREATE UNIQUE INDEX uq_contacto_documento
@@ -75,7 +81,6 @@ CREATE TABLE core.organizacion (
     dv CHAR(1),
 
     giro TEXT,
-    logo_metadata JSONB DEFAULT '{}'::jsonb,
     activo BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
@@ -88,6 +93,13 @@ CREATE TABLE core.organizacion (
             OR (tipo_organizacion = 'PERSONA_NATURAL')
         ),
     UNIQUE(rut, dv)
+);
+
+CREATE TABLE core.organizacion_attachments (
+    organizacion_id UUID REFERENCES core.organizacion(organizacion_uuid),
+    media_id UUID REFERENCES media.media_assets(id),
+    sort_order INT,
+    PRIMARY KEY (organizacion_id, media_id)
 );
 
 -- Catálogo de tipos de dirección organizacional

@@ -253,7 +253,7 @@ ON CONFLICT (rol_id, modulo_id, permiso_id) DO NOTHING;
 -- 8) USUARIOS (contacto_id es UNIQUE y NOT NULL)
 -- ============================================
 INSERT INTO core.usuario (usuario_id, username, password_hash, activo, contacto_id) VALUES
-(1, 'sparra',    '$2a$12$loT1eJ6.iwUCFg2/ajCu9O944h4j5LyiEYMrAwkCGcYoJinn2wC7W', true, 1),
+(1, 'sparra',    '$2b$10$fIes8RyzzulG1X2PU91EEOQqmR6UWS63xbejElSXwTnQu3hW6m2/O', true, 1),
 (2, 'mgonzalez', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', true, 2),
 (3, 'techsupply','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', true, 3),
 (4, 'losandes',  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', true, 4),
