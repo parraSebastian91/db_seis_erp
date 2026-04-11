@@ -34,3 +34,4 @@ CREATE TABLE media_variants (
 -- Índices para velocidad
 CREATE INDEX idx_media_owner ON media_assets(owner_id);
 CREATE INDEX idx_media_status ON media_assets(status);
+CREATE UNIQUE INDEX idx_media_assets_storage_key ON media_assets(storage_key);
