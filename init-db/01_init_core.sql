@@ -45,13 +45,6 @@ CREATE TABLE core.contacto (
         )
 );
 
-CREATE TABLE core.avatar_attachments (
-    usuario_id UUID REFERENCES core.usuario(usuario_uuid),
-    media_id UUID REFERENCES media.media_assets(id),
-    sort_order INT,
-    PRIMARY KEY (usuario_id, media_id)
-);
-
 CREATE UNIQUE INDEX uq_contacto_documento
 ON core.contacto (tipo_documento, numero_documento, pais_emision)
 WHERE numero_documento IS NOT NULL;
@@ -65,6 +58,13 @@ CREATE TABLE core.usuario (
     contacto_id BIGINT UNIQUE NOT NULL REFERENCES core.contacto(contacto_id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE core.avatar_attachments (
+    usuario_id UUID REFERENCES core.usuario(usuario_uuid),
+    media_id UUID REFERENCES media.media_assets(id),
+    sort_order INT,
+    PRIMARY KEY (usuario_id, media_id)
 );
 
 -- 3. ESTRUCTURA EMPRESARIAL
