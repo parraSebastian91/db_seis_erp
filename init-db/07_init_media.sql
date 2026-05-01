@@ -37,3 +37,4 @@ CREATE INDEX idx_media_status ON media_assets(status);
 CREATE UNIQUE INDEX idx_media_assets_storage_key ON media_assets(storage_key);
 
  ALTER TYPE media."media_status" ADD VALUE 'DEPRECATED';
+ ALTER TABLE media.media_variants ALTER COLUMN variant_name TYPE varchar(100) USING variant_name::varchar(100);
