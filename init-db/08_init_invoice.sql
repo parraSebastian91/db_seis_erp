@@ -105,6 +105,7 @@ WHERE status = 'ACEPTADA';
 CREATE INDEX idx_relacion_preferida_org_financiadora ON factura.relaciones_preferidas (organizacion_id, financiadora_id);
 
 ALTER TABLE factura.historial_negocios ADD CONSTRAINT unique_invoice_deal UNIQUE (factura_id);
+ALTER TABLE factura.ofertas ADD revised_at timestamp NULL;
 
 -- querys utiles para la app
 -- El detalle de la "Asistencia" en el Query:
