@@ -20,9 +20,9 @@ CREATE TABLE
         asset_id UUID REFERENCES media.media_assets (id), -- Tu tabla de storage
         organizacion_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- Empresa que sube la factura
         deudor_nombre VARCHAR(255) NOT NULL, -- Nombre del deudor (extraído por OCR)
-        deudor_rut VARCHAR(20) NOT NULL, -- RUT del que debe pagar la factura (extraído por OCR)
-        factura_numero VARCHAR(50) NOT NULL, -- Folio (extraído por OCR)
-        monto_total DECIMAL(15, 2) NOT NULL CHECK (monto_total > 0), -- Monto (extraído por OCR)
+        deudor_rut VARCHAR(255) NOT NULL, -- RUT del que debe pagar la factura (extraído por OCR)
+        factura_numero VARCHAR(255) NOT NULL, -- Folio (extraído por OCR)
+        monto_total VARCHAR(255) NOT null, -- Monto (extraído por OCR)
         fecha_vencimiento DATE NOT NULL, -- Vencimiento (extraído por OCR)
         status factura_status NOT NULL DEFAULT 'PENDIENTE_VALIDACION', -- PENDIENTE_VALIDACION, PUBLICADA, OFERTADA, FINANCIADA, PAGADA, RECHAZADA, CANCELADA, VENCIDA, DENUNCIADA
         created_at TIMESTAMP
@@ -106,6 +106,7 @@ CREATE INDEX idx_relacion_preferida_org_financiadora ON factura.relaciones_prefe
 
 ALTER TABLE factura.historial_negocios ADD CONSTRAINT unique_invoice_deal UNIQUE (factura_id);
 ALTER TABLE factura.ofertas ADD revised_at timestamp NULL;
+
 
 -- querys utiles para la app
 -- El detalle de la "Asistencia" en el Query:
