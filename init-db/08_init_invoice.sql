@@ -106,6 +106,9 @@ CREATE INDEX idx_relacion_preferida_org_financiadora ON factura.relaciones_prefe
 
 ALTER TABLE factura.historial_negocios ADD CONSTRAINT unique_invoice_deal UNIQUE (factura_id);
 ALTER TABLE factura.ofertas ADD revised_at timestamp NULL;
+ALTER TABLE factura.factura ADD correlation_id uuid NOT NULL;
+ALTER TABLE media.media_assets ADD gestor varchar NULL;
+ALTER TABLE factura.factura ADD gestor varchar NULL;
 
 
 -- querys utiles para la app
