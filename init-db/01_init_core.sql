@@ -156,6 +156,16 @@ CREATE TABLE core.organizacion_contacto (
     PRIMARY KEY (organizacion_id, contacto_id)
 );
 
+ALTER TABLE core.organizacion_contacto
+ADD COLUMN tipo_relacion varchar(30) DEFAULT 'REFERENCIA'
+CHECK (tipo_relacion IN (
+    'REFERENCIA',       -- contacto general
+    'PROVEEDOR',        -- proveedor de servicios
+    'FACTURACION',      -- contacto para temas de factura
+    'LEGAL',            -- representante legal
+    'COMERCIAL'         -- ejecutivo comercial externo
+));
+
 -- 4. JERARQUÍAS Y GRUPOS DE TRABAJO
 CREATE TABLE core.grupo_trabajo (
     grupo_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
