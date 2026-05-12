@@ -5,6 +5,7 @@
 
 CREATE SCHEMA IF NOT EXISTS core;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SET search_path TO public, media, core, factura;
 
 CREATE TYPE permiso_tipo AS ENUM (
     'VIEW',
@@ -104,6 +105,10 @@ CREATE TABLE core.organizacion (
         ),
     UNIQUE(rut, dv)
 );
+
+ALTER TABLE core.organizacion 
+ADD COLUMN tipo_participante varchar(30) DEFAULT 'CEDENTE'
+CHECK (tipo_participante IN ('CEDENTE', 'FINANCIADORA'));
 
 CREATE TABLE core.organizacion_attachments (
     organizacion_id UUID REFERENCES core.organizacion(organizacion_uuid),
