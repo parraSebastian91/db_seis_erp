@@ -108,7 +108,18 @@ ALTER TABLE factura.historial_negocios ADD CONSTRAINT unique_invoice_deal UNIQUE
 ALTER TABLE factura.ofertas ADD revised_at timestamp NULL;
 ALTER TABLE factura.factura ADD correlation_id uuid NOT NULL;
 ALTER TABLE media.media_assets ADD gestor varchar NULL;
-ALTER TABLE factura.factura ADD gestor varchar NULL;
+ALTER TABLE factura.factura
+  ADD COLUMN gestor_usuario_uuid UUID;
+
+ALTER TABLE factura.factura
+  ADD CONSTRAINT fk_factura_gestor_usuario
+  FOREIGN KEY (gestor_usuario_uuid)
+  REFERENCES core.usuario(usuario_uuid)
+  ON UPDATE CASCADE
+  ON DELETE SET NULL;
+
+CREATE INDEX idx_factura_gestor_usuario_uuid
+  ON factura.factura (gestor_usuario_uuid);
 
 
 -- querys utiles para la app
