@@ -235,6 +235,12 @@ INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo,
 INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(22, 'Editar Facturas', 'FCT_EDIT', 'Permiso para editar facturas publicadas', true, 'UPDATE'::core."permiso_tipo");
 INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(23, 'Eliminar Facturas', 'FCT_DELETE', 'Permiso para eliminar facturas publicadas', true, 'DELETE'::core."permiso_tipo");
 INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(24, 'Solo Lectura', 'READ_ONLY', 'Permisos para solo lectura', true, 'VIEW'::core."permiso_tipo");
+INSERT INTO core.permiso (per_nombre, per_cod, per_desc, per_activo, permiso_tipo) VALUES
+    ('Ver activos multimedia', 'MEDIA_VIEW', 'Visualizar media assets y metadatos', true, 'VIEW'),
+    ('Obtener URL presignada', 'MEDIA_GET_PRESIGNED_URL', 'Descargar/acceder URLs presignadas de media', true, 'VIEW'),
+    ('Administrar acceso de media', 'MEDIA_SHARE', 'Compartir media assets con otros usuarios', true, 'UPDATE'),
+    ('Eliminar media assets', 'MEDIA_DELETE', 'Eliminar activos multimedia', true, 'DELETE')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO core.rol (rol_id, nombre, codigo, descripcion) VALUES
 (1, 'Super Administrador', 'SUPER_ADMIN', 'Rol con acceso total'),
