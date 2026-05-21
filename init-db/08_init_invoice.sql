@@ -2,6 +2,7 @@ create schema if not exists factura;
 
 CREATE TYPE factura_status AS ENUM (
     'PENDIENTE_VALIDACION',
+    'PENDIENTE_AUTORIZACION',
     'PUBLICADA',
     'OFERTADA',
     'FINANCIADA',
@@ -84,6 +85,295 @@ CREATE TABLE
         updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (organizacion_id, financiadora_id, usuario_id)
     );
+
+-- Tabla de control de cambios para entidades del dominio factura
+CREATE TABLE IF NOT EXISTS factura.control_cambios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    entidad VARCHAR(100) NOT NULL, -- Ej: factura, ofertas, historial_negocios
+    entidad_id UUID NOT NULL,
+    accion VARCHAR(30) NOT NULL, -- INSERT, UPDATE, DELETE, STATUS_CHANGE
+    campo VARCHAR(100), -- Campo afectado cuando aplica
+    valor_anterior TEXT,
+    valor_nuevo TEXT,
+    usuario_uuid UUID REFERENCES core.usuario (usuario_uuid),
+    correlation_id UUID,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_control_cambios_entidad_entidad_id
+    ON factura.control_cambios (entidad, entidad_id, created_at DESC);
+CREATE INDEX idx_control_cambios_usuario
+    ON factura.control_cambios (usuario_uuid, created_at DESC);
+CREATE INDEX idx_control_cambios_correlation
+    ON factura.control_cambios (correlation_id);
+
+-- =========================================================
+-- CONTROL DE CAMBIOS AUTOMATICO (TRIGGERS)
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION factura.tr_registrar_control_cambios()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_entidad TEXT := TG_TABLE_NAME;
+    v_entidad_id UUID;
+    v_accion VARCHAR(30);
+    v_campo VARCHAR(100) := NULL;
+    v_valor_anterior TEXT := NULL;
+    v_valor_nuevo TEXT := NULL;
+    v_usuario_text TEXT := current_setting('app.user_uuid', true);
+    v_correlation_text TEXT := current_setting('app.correlation_id', true);
+    v_usuario_uuid UUID := NULL;
+    v_correlation_id UUID := NULL;
+    v_metadata JSONB;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_entidad_id := NEW.id;
+        v_accion := 'INSERT';
+        v_metadata := jsonb_build_object('new', to_jsonb(NEW));
+    ELSIF TG_OP = 'UPDATE' THEN
+        v_entidad_id := NEW.id;
+        v_accion := 'UPDATE';
+        v_metadata := jsonb_build_object('old', to_jsonb(OLD), 'new', to_jsonb(NEW));
+
+        IF to_jsonb(OLD) ? 'status' AND to_jsonb(NEW) ? 'status' AND (OLD.status IS DISTINCT FROM NEW.status) THEN
+            v_accion := 'STATUS_CHANGE';
+            v_campo := 'status';
+            v_valor_anterior := OLD.status::TEXT;
+            v_valor_nuevo := NEW.status::TEXT;
+        END IF;
+    ELSE
+        v_entidad_id := OLD.id;
+        v_accion := 'DELETE';
+        v_metadata := jsonb_build_object('old', to_jsonb(OLD));
+    END IF;
+
+    IF v_usuario_text IS NOT NULL THEN
+        BEGIN
+            v_usuario_uuid := v_usuario_text::UUID;
+        EXCEPTION WHEN others THEN
+            v_usuario_uuid := NULL;
+        END;
+    END IF;
+
+    IF v_correlation_text IS NOT NULL THEN
+        BEGIN
+            v_correlation_id := v_correlation_text::UUID;
+        EXCEPTION WHEN others THEN
+            v_correlation_id := NULL;
+        END;
+    END IF;
+
+    INSERT INTO factura.control_cambios (
+        entidad,
+        entidad_id,
+        accion,
+        campo,
+        valor_anterior,
+        valor_nuevo,
+        usuario_uuid,
+        correlation_id,
+        metadata
+    ) VALUES (
+        v_entidad,
+        v_entidad_id,
+        v_accion,
+        v_campo,
+        v_valor_anterior,
+        v_valor_nuevo,
+        v_usuario_uuid,
+        v_correlation_id,
+        v_metadata
+    );
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================================================
+-- Vista: facturas_publicadas_con_datos
+-- Facturas publicadas enriquecidas con datos del cliente y gestor.
+-- =========================================================
+CREATE OR REPLACE VIEW factura.vw_facturas_publicadas_con_datos AS
+SELECT
+    fct.id AS factura_id,
+    fct.factura_numero AS folio,
+    fct.deudor_nombre,
+    fct.deudor_rut,
+    fct.monto_total,
+    o.razon_social AS cliente_nombre,
+    o.rut AS cliente_rut,
+    u.usuario_uuid AS gestor_id,
+    CONCAT(c.nombres, ' ', c.apellido_paterno, ' ', c.apellido_materno) AS gestor_nombre,
+    fct.fecha_vencimiento,
+    fct.status,
+    fct.created_at,
+    fct.updated_at
+FROM
+    factura.factura fct
+    JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
+    JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    JOIN core.contacto c ON u.contacto_id = c.contacto_id
+WHERE
+    fct.status = 'PUBLICADA';
+
+-- =========================================================
+-- Función: validar_usuario_ejecutivo_financiadora
+-- Verifica si un usuario es EJECUTIVO_FINANCIADORA o ADMIN_FINANCIADORA.
+-- Retorna TRUE si es válido.
+-- =========================================================
+CREATE OR REPLACE FUNCTION factura.validar_usuario_ejecutivo_financiadora(
+    p_usuario_uuid UUID
+) RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1
+        FROM core.usuario u
+        JOIN core.grupo_miembro gm ON gm.usuario_uuid = u.usuario_uuid
+        JOIN core.grupo_trabajo gt ON gt.grupo_id = gm.grupo_id
+        JOIN core.organizacion o ON o.organizacion_uuid = gt.organizacion_id
+        JOIN core.usuario_rol ur ON u.usuario_id = ur.usuario_id
+        JOIN core.rol r ON r.rol_id = ur.rol_id
+        WHERE
+            u.usuario_uuid = p_usuario_uuid
+            AND u.activo = TRUE
+            AND o.activo = TRUE
+            AND o.tipo_participante = 'FINANCIADORA'
+            AND r.codigo IN ('EJECUTIVO_FINANCIADORA', 'ADMIN_FINANCIADORA')
+    );
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- =========================================================
+-- Función: obtener_facturas_accesibles
+-- Retorna todas las facturas PUBLICADAS que un usuario puede ver.
+-- Filtra por permisos y rol de financiadora.
+--
+-- Parámetros:
+--   p_usuario_uuid:  usuario que solicita ver facturas
+--   p_organizacion_id: organización del usuario (financiadora)
+--
+-- Retorna tabla con: factura_id, folio, cliente, monto, fecha_vencimiento, ...
+-- =========================================================
+CREATE OR REPLACE FUNCTION factura.obtener_facturas_accesibles(
+    p_usuario_uuid UUID,
+    p_organizacion_id UUID
+) RETURNS TABLE (
+    factura_id UUID,
+    folio VARCHAR,
+    deudor_nombre VARCHAR,
+    deudor_rut VARCHAR,
+    monto_total VARCHAR,
+    cliente_nombre VARCHAR,
+    cliente_rut VARCHAR,
+    gestor_id UUID,
+    gestor_nombre VARCHAR,
+    fecha_vencimiento DATE,
+    status VARCHAR,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    tiene_permiso BOOLEAN
+) AS $$
+BEGIN
+    -- Verificar que el usuario sea ejecutivo de una financiadora
+    IF NOT permisos.validar_usuario_ejecutivo_financiadora(p_usuario_uuid) THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        fct.id,
+        fct.factura_numero,
+        fct.deudor_nombre,
+        fct.deudor_rut,
+        fct.monto_total,
+        o.razon_social,
+        o.rut,
+        u.usuario_uuid,
+        CONCAT(c.nombres, ' ', c.apellido_paterno, ' ', c.apellido_materno),
+        fct.fecha_vencimiento,
+        fct.status::VARCHAR,
+        fct.created_at,
+        fct.updated_at,
+        permisos.check_access('FACTURA', fct.id, p_usuario_uuid, 'VIEW', p_organizacion_id) AS tiene_permiso
+    FROM
+        factura.factura fct
+        JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
+        JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+        JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    WHERE
+        fct.status = 'PUBLICADA'
+        AND (
+            -- Usuario tiene acceso directo, por grupo o cross-org
+            permisos.check_access('FACTURA', fct.id, p_usuario_uuid, 'VIEW', p_organizacion_id)
+            OR
+            -- O es propietario
+            EXISTS (
+                SELECT 1 FROM permisos.resource_owner ro
+                WHERE ro.resource_type = 'FACTURA'
+                  AND ro.resource_id = fct.id
+                  AND ro.owner_usuario_uuid = p_usuario_uuid
+            )
+        )
+    ORDER BY fct.created_at DESC;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- =========================================================
+-- Vista: facturas_accesibles_para_financiadora
+-- Facturas que una financiadora (por org_id) puede ver.
+-- Parámetro externo: requiere filtro en WHERE.
+--
+-- Uso: 
+--   SELECT * FROM factura.vw_facturas_accesibles_por_org
+--   WHERE organizacion_id = :financiera_org_uuid;
+-- =========================================================
+CREATE OR REPLACE VIEW factura.vw_facturas_accesibles_por_org AS
+SELECT
+    fct.id AS factura_id,
+    fct.factura_numero AS folio,
+    fct.deudor_nombre,
+    fct.deudor_rut,
+    fct.monto_total,
+    o.razon_social AS cliente_nombre,
+    o.rut AS cliente_rut,
+    u.usuario_uuid AS gestor_id,
+    CONCAT(c.nombres, ' ', c.apellido_paterno, ' ', c.apellido_materno) AS gestor_nombre,
+    fct.fecha_vencimiento,
+    fct.status,
+    fct.created_at,
+    fct.updated_at,
+    gt.organizacion_id AS financiera_org_id
+FROM
+    factura.factura fct
+    JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
+    JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    -- Traer los permisos concedidos
+    JOIN permisos.access_policy ap ON ap.resource_type = 'FACTURA'
+        AND ap.resource_id = fct.id
+        AND ap.revoked_at IS NULL
+        AND (ap.expires_at IS NULL OR ap.expires_at > NOW())
+    JOIN core.grupo_trabajo gt ON gt.grupo_id = ap.grantee_grupo_id
+        AND gt.activo = TRUE
+WHERE
+    fct.status = 'PUBLICADA'
+    AND (ap.grantee_grupo_id IS NOT NULL OR ap.grantee_usuario_uuid IS NOT NULL);
+
+
+DROP TRIGGER IF EXISTS tr_control_cambios_factura ON factura.factura;
+CREATE TRIGGER tr_control_cambios_factura
+AFTER INSERT OR UPDATE OR DELETE ON factura.factura
+FOR EACH ROW EXECUTE FUNCTION factura.tr_registrar_control_cambios();
+
+DROP TRIGGER IF EXISTS tr_control_cambios_ofertas ON factura.ofertas;
+CREATE TRIGGER tr_control_cambios_ofertas
+AFTER INSERT OR UPDATE OR DELETE ON factura.ofertas
+FOR EACH ROW EXECUTE FUNCTION factura.tr_registrar_control_cambios();
 
 -- Índice para buscar rápido "con quién ha trabajado esta empresa"
 CREATE INDEX idx_historial_relacion ON factura.historial_negocios (organizacion_id, usuario_id);
