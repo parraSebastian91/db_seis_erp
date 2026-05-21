@@ -1,6 +1,6 @@
 create schema if not exists factura;
 
-CREATE TYPE factura_status AS ENUM (
+CREATE TYPE factura.factura_status AS ENUM (
     'PENDIENTE_VALIDACION',
     'PENDIENTE_AUTORIZACION',
     'PUBLICADA',
@@ -13,7 +13,7 @@ CREATE TYPE factura_status AS ENUM (
     'DENUNCIADA'
 );
 
-CREATE TYPE offer_status AS ENUM ('ENVIADA', 'REVISADA', 'ACEPTADA', 'RECHAZADA');
+CREATE TYPE factura.offer_status AS ENUM ('ENVIADA', 'REVISADA', 'ACEPTADA', 'RECHAZADA');
 
 CREATE TABLE
     factura.factura (
