@@ -66,6 +66,8 @@ INSERT INTO core.contacto (
 (10,'Pedro',    'Silva',     NULL, 'San Miguel 789, Santiago', '+56965432109', 'pedro.silva@email.com', '{}'::jsonb, 5)
 ON CONFLICT (contacto_id) DO NOTHING;
 
+INSERT INTO core.contacto (nombres, apellido_paterno, apellido_materno, direccion, celular, correo, tipo_documento, numero_documento, pais_emision, fecha_nacimiento, redes_sociales, tipo_contacto_id, created_at, updated_at, activo, eliminado_at) VALUES('Isamar', 'Sepulveda', 'Orostica', 'Pedro mira 820, san miguel', '+56957910176', 'isamar.sepulveda@gmail.com', NULL, NULL, 'CL', NULL, '{}'::jsonb, NULL, '2026-05-21 21:32:58.895', '2026-05-21 21:32:58.895', true, NULL);
+
 -- ============================================
 -- 3) ORGANIZACIONES (sin contacto_id en esta tabla)
 -- ============================================
@@ -364,6 +366,10 @@ INSERT INTO core.usuario (usuario_id, username, password_hash, activo, contacto_
 (8, 'vsoto',     crypt('usuario123'::text, gen_salt('bf'::text, 10)), true, 8),
 (9, 'iparedes',  crypt('usuario123'::text, gen_salt('bf'::text, 10)), true, 9),
 (10,'psilva',    crypt('usuario123'::text, gen_salt('bf'::text, 10)), true,10)
+
+INSERT INTO core.usuario ( username, password_hash, activo, contacto_id) VALUES
+('isepulveda',    crypt('usuario123'::text, gen_salt('bf'::text, 10)), true,11)
+
 ON CONFLICT (usuario_id) DO NOTHING;
 
 -- Mantiene password original del usuario 1. El resto queda con password usuario123.
