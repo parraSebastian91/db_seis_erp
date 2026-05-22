@@ -4,18 +4,18 @@
 -- =============================================================================
 
 CREATE SCHEMA IF NOT EXISTS core;
+CREATE SCHEMA IF NOT EXISTS media;
+CREATE SCHEMA IF NOT EXISTS factura;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 SET search_path TO public, media, core, factura;
 
-CREATE TYPE permiso_tipo AS ENUM (
+CREATE TYPE core.permiso_tipo AS ENUM (
     'VIEW',
     'DELETE',
     'CREATE',
     'UPDATE'
 );
-
-
-
 
 -- 1. REFERENCIAS
 CREATE TABLE core.tipo_contacto (

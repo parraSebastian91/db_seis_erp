@@ -8,25 +8,25 @@ SET search_path TO core, media, public;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- (Opcional para re-ejecución limpia)
--- TRUNCATE TABLE
---   core.auth_refresh_sessions,
---   core.usuario_rol,
---   core.rol_modulo_permiso,
---   core.permiso,
---   core.rol,
---   core.funcionalidad,
---   core.modulo,
---   core.organizacion_sistema,
---   core.sistema,
---   core.grupo_miembro,
---   core.grupo_trabajo,
---   core.cuenta_bancaria,
---   core.organizacion_contacto,
---   core.usuario,
---   core.organizacion,
---   core.contacto,
---   core.tipo_contacto
--- RESTART IDENTITY CASCADE;
+TRUNCATE TABLE
+  core.auth_refresh_sessions,
+  core.usuario_rol,
+  core.rol_modulo_permiso,
+  core.permiso,
+  core.rol,
+  core.funcionalidad,
+  core.modulo,
+  core.organizacion_sistema,
+  core.sistema,
+  core.grupo_miembro,
+  core.grupo_trabajo,
+  core.cuenta_bancaria,
+  core.organizacion_contacto,
+  core.usuario,
+  core.organizacion,
+  core.contacto,
+  core.tipo_contacto
+RESTART IDENTITY CASCADE;
 
 -- ============================================
 -- 1) TIPOS 
