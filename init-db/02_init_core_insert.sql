@@ -69,17 +69,13 @@ ON CONFLICT (contacto_id) DO NOTHING;
 -- ============================================
 -- 3) ORGANIZACIONES (sin contacto_id en esta tabla)
 -- ============================================
-INSERT INTO core.organizacion (
-  organizacion_id, razon_social, tipo_organizacion, rut, dv, giro, activo
-) VALUES
-(1, 'Empresa Demo S.A.', 'JURIDICA', '76123456', '7', 'Servicios de Tecnología', true),
-(2, 'Comercial Sur Limitada', 'JURIDICA', '77234567', '8', 'Comercio al por Mayor', true),
-(3, 'Industrias del Pacífico S.A.', 'JURIDICA', '78345678', '9', 'Manufactura Industrial', true),
-(4, 'Servicios Profesionales SpA', 'JURIDICA', '79456789', '0', 'Consultoría y Asesorías', true),
-(5, 'Distribuidora Central', 'JURIDICA', '80567890', 'K', 'Distribución y Logística', false),
-(6, 'Financiera Andina SpA', 'JURIDICA', '81678901', '2', 'Servicios de factoring y financiamiento', true),
-(7, 'Capital Norte Factoring Ltda', 'JURIDICA', '82789012', '3', 'Financiamiento para pymes', true)
-ON CONFLICT (organizacion_id) DO NOTHING;
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(3, 'd2ce2d13-d5f1-4ec7-a25b-5152e5ef2366'::uuid, 'Industrias del Pacífico S.A.', 'JURIDICA', '78345678', '9', 'Manufactura Industrial', true, '2026-05-11 16:43:29.759', '2026-05-11 16:43:29.759', 'CEDENTE');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(4, '63b90ce7-4e17-4cd6-867f-1b5ab74c83a5'::uuid, 'Servicios Profesionales SpA', 'JURIDICA', '79456789', '0', 'Consultoría y Asesorías', true, '2026-05-11 16:43:29.759', '2026-05-11 16:43:29.759', 'CEDENTE');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(5, 'd1591a3c-4d0c-4a24-a277-10f60e3a6218'::uuid, 'Distribuidora Central', 'JURIDICA', '80567890', 'K', 'Distribución y Logística', false, '2026-05-11 16:43:29.759', '2026-05-11 16:43:29.759', 'CEDENTE');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(2, '01cfc6e9-5d74-4271-8fe0-6d755d91f6e1'::uuid, 'Comercial Sur Limitada', 'JURIDICA', '77234567', '8', 'Comercio al por Mayor', true, '2026-05-11 16:43:29.759', '2026-05-12 12:42:05.920', 'CEDENTE');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(6, '98f70369-f147-437a-b2ea-87fa278fc4de'::uuid, 'Financiera Andina SpA', 'JURIDICA', '81678901', '2', 'Servicios de factoring y financiamiento', true, '2026-05-11 16:43:29.759', '2026-05-13 10:14:58.178', 'FINANCIADORA');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(7, '72a0b0f6-a3f0-493d-809a-eb0c31954e0f'::uuid, 'Capital Norte Factoring Ltda', 'JURIDICA', '82789012', '3', 'Financiamiento para pymes', true, '2026-05-11 16:43:29.759', '2026-05-13 10:14:58.191', 'FINANCIADORA');
+INSERT INTO core.organizacion (organizacion_id, organizacion_uuid, razon_social, tipo_organizacion, rut, dv, giro, activo, created_at, updated_at, tipo_participante) VALUES(1, '23bcc06d-67f9-4096-b58e-87242c5f82c9'::uuid, 'Empresa Demo S.A.', 'JURIDICA', '76123456', '7', 'Servicios de Tecnología', true, '2026-05-11 16:43:29.759', '2026-05-13 10:14:58.193', 'CEDENTE');
 
 WITH direcciones(org_id, tipo_codigo, calle, numero, depto_oficina, comuna, ciudad, region, codigo_postal, pais, referencia, es_principal, activo) AS (
     VALUES
@@ -182,15 +178,15 @@ INSERT INTO core.cuenta_bancaria (organizacion_id, nombre_titular, rut_titular, 
 -- 6) SISTEMAS / MÓDULOS / FUNCIONALIDADES
 -- ============================================
 
-INSERT INTO core.sistema (sistema_id, nombre, "path", descripcion, activo, icono) 
-VALUES(1, 'Factoring', '/factoring', 'Gestion de tus facturas', true, 'bolt')
-ON CONFLICT (sistema_id) DO NOTHING;
+INSERT INTO core.sistema (sistema_id, nombre, "path", descripcion, activo, icono) VALUES(2, 'Organización', '/org-admin', 'Administracion de organización', true, 'account_tree');
+INSERT INTO core.sistema (sistema_id, nombre, "path", descripcion, activo, icono) VALUES(3, 'Administración', '/administracion', 'Administracion plataforma', true, 'settings');
+INSERT INTO core.sistema (sistema_id, nombre, "path", descripcion, activo, icono) VALUES(1, 'Factoring', '/factoring', 'Gestión de tus facturas', true, 'bolt');
 
-INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES
-(1, 'Dashboard', '/dashboard-facturas', 'Informacion general de tu gestion', true, 1, NULL),
-(2, 'Publicador', '/publicador-facturas', 'Publica tus facturas para financiarlas', true, 1, NULL),
-(3, 'Ofertas', '/offers', 'Gestion de ofertas de financiamiento', true, 1, NULL)
-ON CONFLICT (modulo_id) DO NOTHING;
+INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(1, 'Dashboard', '/dashboard-facturas', 'Informacion general de tu gestion', true, 1, NULL);
+INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(2, 'Publicador', '/publicador-facturas', 'Publica tus facturas para financiarlas', true, 1, NULL);
+INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(4, 'Work Team', '/work-team', 'Gestion de colaboradores', true, 2, NULL);
+INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(6, 'Permisos', '/permisos', 'Gestion de plataforma', true, 3, NULL);
+INSERT INTO core.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(3, 'Oportunidades', '/ofertador-facturas', 'Gestion de ofertas de financiamiento', true, 1, NULL);
 
 
 INSERT INTO core.funcionalidad (funcionalidad_id, nombre, descripcion, path, modulo_id, activo) VALUES
@@ -241,6 +237,16 @@ INSERT INTO core.permiso (per_nombre, per_cod, per_desc, per_activo, permiso_tip
     ('Administrar acceso de media', 'MEDIA_SHARE', 'Compartir media assets con otros usuarios', true, 'UPDATE'),
     ('Eliminar media assets', 'MEDIA_DELETE', 'Eliminar activos multimedia', true, 'DELETE')
 ON CONFLICT DO NOTHING;
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(25, 'Crear Oportunidades', 'OPT_CREATE', 'Permiso para crear oportunidades de financiamiento', true, 'CREATE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(27, 'Ver Oportunidades', 'OPT_VIEW', 'Permiso para ver oportunidades de financiamiento', true, 'VIEW'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(28, 'Eliminar Oportunidades', 'OPT_DELETE', 'Permiso para eliminar OPT de financiamiento', true, 'DELETE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(29, 'Vista Dashboard Facturacion', 'SYS_FCT_DSH', 'Permiso para ver DASHBOARD de financiamiento', true, 'VIEW'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(21, 'Crear Facturas', 'FCT_CREATE', 'Permiso para crear publicar facturas', true, 'CREATE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(30, 'Ver Perfil', 'PRF_VIEW', 'Permiso para ver perfil de usuario', true, 'VIEW'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(31, 'Editar Perfil', 'PRF_EDIT', 'Permiso para editar perfil de usuario', true, 'UPDATE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(32, 'Crear Perfil', 'PRF_CREATE', 'Permiso para Crear perfil de usuario', true, 'CREATE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(26, 'Actualizar Oportunidaades', 'OPT_EDIT', 'Permiso para editar oportunidad de financiamiento', true, 'UPDATE'::core."permiso_tipo");
+INSERT INTO core.permiso (permiso_id, per_nombre, per_cod, per_desc, per_activo, "permiso_tipo") VALUES(33, 'Eliminar Perfil', 'PRF_DELETE', 'Permiso para eliminar Perfil de usuario', true, 'DELETE'::core."permiso_tipo");
 
 INSERT INTO core.rol (rol_id, nombre, codigo, descripcion) VALUES
 (1, 'Super Administrador', 'SUPER_ADMIN', 'Rol con acceso total'),
@@ -262,12 +268,87 @@ CROSS JOIN core.permiso p
 ON CONFLICT (rol_id, modulo_id, permiso_id) DO NOTHING;
 
 -- Roles base mínimos
-INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES
-(2, 2, 9), (2, 2, 5), (2, 2, 6), (2, 2, 7),
-(3, 1, 5), (3, 2, 5), (3, 3, 5),
-(4, 3, 5), (4, 3, 6), (4, 3, 7),
-(5, 1, 5), (5, 2, 5), (5, 3, 5)
-ON CONFLICT (rol_id, modulo_id, permiso_id) DO NOTHING;
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 1);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 1);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 1);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 2);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 2);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 2);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 3);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 3);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 3);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 4);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 4);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 4);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 5);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 5);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 5);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 6);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 6);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 6);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 7);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 7);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 7);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 8);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 8);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 8);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 9);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 9);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 9);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 10);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 10);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 10);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 15);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 15);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 15);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 16);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 16);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 16);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 17);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 17);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 17);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 18);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 18);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 18);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 19);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 19);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 19);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 20);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 20);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 20);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 21);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 21);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 21);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 22);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 22);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 22);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 23);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 23);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 23);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 1, 24);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 2, 24);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(1, 3, 24);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(6, 1, 29);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 1, 29);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(8, 1, 29);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(9, 1, 29);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(6, 2, 20);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(6, 2, 21);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 3, 25);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 3, 27);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(8, 2, 25);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(8, 2, 26);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(8, 2, 27);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(9, 2, 20);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(9, 2, 21);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(9, 2, 22);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(5, 1, 19);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(5, 1, 1);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(5, 1, 9);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(6, 2, 22);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 3, 9);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 3, 19);
+INSERT INTO core.rol_modulo_permiso (rol_id, modulo_id, permiso_id) VALUES(7, 3, 1);
 
 -- ============================================
 -- 8) USUARIOS (contacto_id es UNIQUE y NOT NULL)
@@ -293,143 +374,41 @@ WHERE usuario_id BETWEEN 2 AND 10;
 DELETE FROM core.usuario_rol
 WHERE usuario_id BETWEEN 2 AND 9;
 
-INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES
-(1,1),
-(2,4),
-(3,4),
-(4,3),
-(5,3),
-(6,3),
-(7,3),
-(8,3),
-(9,3),
-(10,5)
-ON CONFLICT (usuario_id, rol_id) DO NOTHING;
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(1, 1);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(2, 4);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(3, 4);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(4, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(5, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(6, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(7, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(7, 7);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(7, 5);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(8, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(9, 3);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(10, 5);
+INSERT INTO core.usuario_rol (usuario_id, rol_id) VALUES(10, 6);
 
--- ============================================
--- 8.1) GRUPOS DE TRABAJO FINANCIADORAS
--- 2 financiadoras, 2 lideres (rol Supervisor), 3 ejecutivos por grupo (rol Usuario Estandar)
--- ============================================
-INSERT INTO core.grupo_trabajo (grupo_id, nombre, descripcion, lider_usuario_uuid, organizacion_id, activo, grupo_metadata)
-SELECT
-  '60000000-0000-0000-0000-000000000001'::uuid,
-  'Equipo Andina Santiago',
-  'Equipo comercial de Financiera Andina',
-  u.usuario_uuid,
-  o.organizacion_uuid,
-  true,
-  '{"tipo":"financiadora","zona":"metropolitana"}'::jsonb
-FROM core.usuario u
-JOIN core.organizacion o ON o.organizacion_id = 6
-WHERE u.usuario_id = 2
-ON CONFLICT (grupo_id) DO UPDATE SET
-  nombre = EXCLUDED.nombre,
-  descripcion = EXCLUDED.descripcion,
-  lider_usuario_uuid = EXCLUDED.lider_usuario_uuid,
-  organizacion_id = EXCLUDED.organizacion_id,
-  activo = EXCLUDED.activo,
-  grupo_metadata = EXCLUDED.grupo_metadata;
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000012'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, '7a2242cd-1c5b-4900-ae71-a3ea6095dfb9'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000013'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, '1aa31cf6-df33-4fff-b1fe-4ef538834891'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000014'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, 'eee567fd-b959-4c01-830c-9b36e76f314c'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000011'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, '2fbbbc63-caf9-49a2-80cd-6f0385f2c3d2'::uuid, NULL, 'Lider de equipo', '{"rol": "lider"}'::jsonb, '2026-05-11 16:43:31.168', '2026-05-11 16:43:31.168', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000012'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, '0b30d911-bd4c-447d-900c-c9f5e8c4d22d'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000013'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, 'd1086fc8-70ba-4b86-8835-6e56feefff20'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000014'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, 'd3fe76a7-97e0-47b9-a5ff-99b9543a2b54'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000011'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, 'c69f9a0a-8c71-498c-8c0f-842b799b949d'::uuid, NULL, 'Lider de equipo', '{"rol": "lider"}'::jsonb, '2026-05-11 16:43:31.158', '2026-05-11 16:43:31.158', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('07db2a4c-c442-4a6e-88e2-f389c2a81bbc'::uuid, '2212d540-2f58-490e-96fd-1421ac60c2aa'::uuid, '3549d4fa-95ea-4867-a543-08ac38dda215'::uuid, NULL, 'Lider Comercial', '{}'::jsonb, '2026-05-12 12:38:17.657', '2026-05-12 12:38:17.657', true);INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000012'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, '7a2242cd-1c5b-4900-ae71-a3ea6095dfb9'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000013'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, '1aa31cf6-df33-4fff-b1fe-4ef538834891'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000014'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, 'eee567fd-b959-4c01-830c-9b36e76f314c'::uuid, '60000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.164', '2026-05-11 16:43:31.164', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000011'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, '2fbbbc63-caf9-49a2-80cd-6f0385f2c3d2'::uuid, NULL, 'Lider de equipo', '{"rol": "lider"}'::jsonb, '2026-05-11 16:43:31.168', '2026-05-11 16:43:31.168', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000012'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, '0b30d911-bd4c-447d-900c-c9f5e8c4d22d'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000013'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, 'd1086fc8-70ba-4b86-8835-6e56feefff20'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('70000000-0000-0000-0000-000000000014'::uuid, '70000000-0000-0000-0000-000000000001'::uuid, 'd3fe76a7-97e0-47b9-a5ff-99b9543a2b54'::uuid, '70000000-0000-0000-0000-000000000011'::uuid, 'Ejecutivo de cuentas', '{"rol": "ejecutivo"}'::jsonb, '2026-05-11 16:43:31.172', '2026-05-11 16:43:31.172', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('60000000-0000-0000-0000-000000000011'::uuid, '60000000-0000-0000-0000-000000000001'::uuid, 'c69f9a0a-8c71-498c-8c0f-842b799b949d'::uuid, NULL, 'Lider de equipo', '{"rol": "lider"}'::jsonb, '2026-05-11 16:43:31.158', '2026-05-11 16:43:31.158', true);
+INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, fecha_ingreso, updated_at, active) VALUES('07db2a4c-c442-4a6e-88e2-f389c2a81bbc'::uuid, '2212d540-2f58-490e-96fd-1421ac60c2aa'::uuid, '3549d4fa-95ea-4867-a543-08ac38dda215'::uuid, NULL, 'Lider Comercial', '{}'::jsonb, '2026-05-12 12:38:17.657', '2026-05-12 12:38:17.657', true);
 
-INSERT INTO core.grupo_trabajo (grupo_id, nombre, descripcion, lider_usuario_uuid, organizacion_id, activo, grupo_metadata)
-SELECT
-  '70000000-0000-0000-0000-000000000001'::uuid,
-  'Equipo Capital Norte',
-  'Equipo comercial de Capital Norte Factoring',
-  u.usuario_uuid,
-  o.organizacion_uuid,
-  true,
-  '{"tipo":"financiadora","zona":"norte"}'::jsonb
-FROM core.usuario u
-JOIN core.organizacion o ON o.organizacion_id = 7
-WHERE u.usuario_id = 3
-ON CONFLICT (grupo_id) DO UPDATE SET
-  nombre = EXCLUDED.nombre,
-  descripcion = EXCLUDED.descripcion,
-  lider_usuario_uuid = EXCLUDED.lider_usuario_uuid,
-  organizacion_id = EXCLUDED.organizacion_id,
-  activo = EXCLUDED.activo,
-  grupo_metadata = EXCLUDED.grupo_metadata;
-
-INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, active)
-SELECT
-  '60000000-0000-0000-0000-000000000011'::uuid,
-  '60000000-0000-0000-0000-000000000001'::uuid,
-  u.usuario_uuid,
-  NULL,
-  'Lider de equipo',
-  '{"rol":"lider"}'::jsonb,
-  true
-FROM core.usuario u
-WHERE u.usuario_id = 2
-ON CONFLICT (grupo_id, usuario_uuid) DO UPDATE SET
-  jefe_directo_id = EXCLUDED.jefe_directo_id,
-  cargo_en_grupo = EXCLUDED.cargo_en_grupo,
-  grupo_metadata = EXCLUDED.grupo_metadata,
-  active = EXCLUDED.active;
-
-INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, active)
-SELECT
-  x.miembro_id,
-  '60000000-0000-0000-0000-000000000001'::uuid,
-  u.usuario_uuid,
-  '60000000-0000-0000-0000-000000000011'::uuid,
-  'Ejecutivo de cuentas',
-  '{"rol":"ejecutivo"}'::jsonb,
-  true
-FROM (VALUES
-  (4, '60000000-0000-0000-0000-000000000012'::uuid),
-  (6, '60000000-0000-0000-0000-000000000013'::uuid),
-  (8, '60000000-0000-0000-0000-000000000014'::uuid)
-) AS x(usuario_id, miembro_id)
-JOIN core.usuario u ON u.usuario_id = x.usuario_id
-ON CONFLICT (grupo_id, usuario_uuid) DO UPDATE SET
-  jefe_directo_id = EXCLUDED.jefe_directo_id,
-  cargo_en_grupo = EXCLUDED.cargo_en_grupo,
-  grupo_metadata = EXCLUDED.grupo_metadata,
-  active = EXCLUDED.active;
-
-INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, active)
-SELECT
-  '70000000-0000-0000-0000-000000000011'::uuid,
-  '70000000-0000-0000-0000-000000000001'::uuid,
-  u.usuario_uuid,
-  NULL,
-  'Lider de equipo',
-  '{"rol":"lider"}'::jsonb,
-  true
-FROM core.usuario u
-WHERE u.usuario_id = 3
-ON CONFLICT (grupo_id, usuario_uuid) DO UPDATE SET
-  jefe_directo_id = EXCLUDED.jefe_directo_id,
-  cargo_en_grupo = EXCLUDED.cargo_en_grupo,
-  grupo_metadata = EXCLUDED.grupo_metadata,
-  active = EXCLUDED.active;
-
-INSERT INTO core.grupo_miembro (miembro_id, grupo_id, usuario_uuid, jefe_directo_id, cargo_en_grupo, grupo_metadata, active)
-SELECT
-  x.miembro_id,
-  '70000000-0000-0000-0000-000000000001'::uuid,
-  u.usuario_uuid,
-  '70000000-0000-0000-0000-000000000011'::uuid,
-  'Ejecutivo de cuentas',
-  '{"rol":"ejecutivo"}'::jsonb,
-  true
-FROM (VALUES
-  (5, '70000000-0000-0000-0000-000000000012'::uuid),
-  (7, '70000000-0000-0000-0000-000000000013'::uuid),
-  (9, '70000000-0000-0000-0000-000000000014'::uuid)
-) AS x(usuario_id, miembro_id)
-JOIN core.usuario u ON u.usuario_id = x.usuario_id
-ON CONFLICT (grupo_id, usuario_uuid) DO UPDATE SET
-  jefe_directo_id = EXCLUDED.jefe_directo_id,
-  cargo_en_grupo = EXCLUDED.cargo_en_grupo,
-  grupo_metadata = EXCLUDED.grupo_metadata,
-  active = EXCLUDED.active;
-
--- ============================================
--- 9) SESIONES REFRESH (estructura actual)
--- ============================================
-
+INSERT INTO core.grupo_trabajo (grupo_id, nombre, descripcion, lider_usuario_uuid, organizacion_id, activo, grupo_metadata, created_at) VALUES('70000000-0000-0000-0000-000000000001'::uuid, 'Equipo Capital Norte', 'Equipo comercial de Capital Norte Factoring', '2fbbbc63-caf9-49a2-80cd-6f0385f2c3d2'::uuid, '72a0b0f6-a3f0-493d-809a-eb0c31954e0f'::uuid, true, '{"tipo": "financiadora", "zona": "norte"}'::jsonb, '2026-05-11 16:43:31.154');
+INSERT INTO core.grupo_trabajo (grupo_id, nombre, descripcion, lider_usuario_uuid, organizacion_id, activo, grupo_metadata, created_at) VALUES('60000000-0000-0000-0000-000000000001'::uuid, 'Equipo Andina Santiago', 'Equipo comercial de Financiera Andina', 'c69f9a0a-8c71-498c-8c0f-842b799b949d'::uuid, '98f70369-f147-437a-b2ea-87fa278fc4de'::uuid, true, '{"tipo": "financiadora", "zona": "metropolitana"}'::jsonb, '2026-05-11 16:43:31.148');
+INSERT INTO core.grupo_trabajo (grupo_id, nombre, descripcion, lider_usuario_uuid, organizacion_id, activo, grupo_metadata, created_at) VALUES('2212d540-2f58-490e-96fd-1421ac60c2aa'::uuid, 'Equipo Comercial', 'Equipo Comercial', '3549d4fa-95ea-4867-a543-08ac38dda215'::uuid, '01cfc6e9-5d74-4271-8fe0-6d755d91f6e1'::uuid, true, '{}'::jsonb, '2026-05-12 12:34:33.615');
 
 -- ============================================
 -- 10) AJUSTE DE SECUENCIAS (por inserts con ID explícito)
