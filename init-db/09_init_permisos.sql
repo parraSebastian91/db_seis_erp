@@ -11,12 +11,19 @@
 --
 -- COMO AGREGAR UN NUEVO RECURSO:
 --   1. INSERT INTO permisos.resource_catalog (code, descripcion) VALUES ('MI_RECURSO', '...');
---   2. Insertar filas en permisos.resource_owner / permisos.access_policy con ese code.
+--   2. Insertar filas en permisos.resource_owner / permisos.access_policy / permisos.user_whitelist con ese code.
 --   3. Llamar permisos.check_access('MI_RECURSO', <id>, <usuario>, <permiso>).
 --   No requiere nuevas tablas.
 -- =============================================================================
 
 CREATE SCHEMA IF NOT EXISTS permisos;
+
+CREATE TYPE permisos.permiso_tipo AS ENUM (
+    'VIEW',
+    'DELETE',
+    'CREATE',
+    'UPDATE'
+);
 
 -- =========================================================
 -- 1. CATÁLOGO DE TIPOS DE RECURSO
@@ -108,6 +115,33 @@ CREATE INDEX idx_perm_policy_org
 CREATE INDEX idx_perm_policy_global
     ON permisos.access_policy (resource_type, organizacion_id, permiso)
     WHERE resource_id IS NULL AND revoked_at IS NULL;
+
+-- =========================================================
+-- 3.B LISTA BLANCA DE USUARIOS (cross-org / fuera de grupos)
+-- Permite otorgar acceso explícito a usuarios puntuales, aunque
+-- no pertenezcan a un grupo de trabajo o a la misma organización.
+-- =========================================================
+CREATE TABLE IF NOT EXISTS permisos.user_whitelist (
+    id                       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_type            VARCHAR(80) NOT NULL REFERENCES permisos.resource_catalog(code),
+    resource_id              UUID,       -- NULL = permiso global por tipo de recurso
+    allowed_usuario_uuid     UUID        NOT NULL REFERENCES core.usuario(usuario_uuid) ON DELETE CASCADE,
+    granted_by_usuario_uuid  UUID        REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    source_organizacion_id   UUID        REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
+    permiso                  VARCHAR(80) NOT NULL DEFAULT 'VIEW',
+    expires_at               TIMESTAMPTZ,
+    razon_acceso             VARCHAR(255),
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    revoked_at               TIMESTAMPTZ,
+    UNIQUE (resource_type, resource_id, allowed_usuario_uuid, permiso)
+);
+
+CREATE INDEX idx_perm_whitelist_usuario
+    ON permisos.user_whitelist (allowed_usuario_uuid)
+    WHERE revoked_at IS NULL;
+CREATE INDEX idx_perm_whitelist_resource
+    ON permisos.user_whitelist (resource_type, resource_id)
+    WHERE revoked_at IS NULL;
 
 -- =========================================================
 -- 4. COMPARTIR ENTRE ORGANIZACIONES
@@ -226,6 +260,24 @@ BEGIN
         RETURN TRUE;
     END IF;
 
+    -- 3.B ¿Usuario en lista blanca explícita?
+    IF EXISTS (
+        SELECT 1 FROM permisos.user_whitelist uw
+        WHERE uw.resource_type        = p_resource_type
+          AND (uw.resource_id         = p_resource_id OR uw.resource_id IS NULL)
+          AND uw.allowed_usuario_uuid = p_usuario_uuid
+          AND uw.permiso              = p_permiso
+          AND uw.revoked_at           IS NULL
+          AND (uw.expires_at          IS NULL OR uw.expires_at > NOW())
+          AND (
+                p_organizacion_id IS NULL
+                OR uw.source_organizacion_id IS NULL
+                OR uw.source_organizacion_id = p_organizacion_id
+          )
+    ) THEN
+        RETURN TRUE;
+    END IF;
+
     -- 4. ¿Acceso por grupo de trabajo?
     IF EXISTS (
         SELECT 1 FROM permisos.access_policy ap
@@ -286,6 +338,81 @@ BEGIN
     )
     RETURNING id INTO v_id;
     RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================================================
+-- 11. FUNCIÓN: grant_user_whitelist_access
+-- Otorga acceso explícito a un usuario (idempotente).
+-- Útil para usuarios fuera de grupo de trabajo o cross-org.
+-- =========================================================
+CREATE OR REPLACE FUNCTION permisos.grant_user_whitelist_access(
+    p_resource_type           VARCHAR(80),
+    p_resource_id             UUID,
+    p_allowed_usuario_uuid    UUID,
+    p_granted_by_usuario_uuid UUID,
+    p_permiso                 VARCHAR(80) DEFAULT 'VIEW',
+    p_razon                   VARCHAR(255) DEFAULT NULL,
+    p_expires_at              TIMESTAMPTZ DEFAULT NULL,
+    p_source_organizacion_id  UUID        DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+    v_id UUID;
+BEGIN
+    INSERT INTO permisos.user_whitelist (
+        resource_type,
+        resource_id,
+        allowed_usuario_uuid,
+        granted_by_usuario_uuid,
+        source_organizacion_id,
+        permiso,
+        razon_acceso,
+        expires_at
+    ) VALUES (
+        p_resource_type,
+        p_resource_id,
+        p_allowed_usuario_uuid,
+        p_granted_by_usuario_uuid,
+        p_source_organizacion_id,
+        p_permiso,
+        p_razon,
+        p_expires_at
+    )
+    ON CONFLICT (resource_type, resource_id, allowed_usuario_uuid, permiso)
+    DO UPDATE SET
+        revoked_at            = NULL,
+        expires_at            = EXCLUDED.expires_at,
+        razon_acceso          = EXCLUDED.razon_acceso,
+        source_organizacion_id = EXCLUDED.source_organizacion_id
+    RETURNING id INTO v_id;
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================================================
+-- 11.B FUNCIÓN: revoke_user_whitelist_access
+-- Revoca acceso explícito de lista blanca sin borrar historial.
+-- =========================================================
+CREATE OR REPLACE FUNCTION permisos.revoke_user_whitelist_access(
+    p_resource_type        VARCHAR(80),
+    p_resource_id          UUID,
+    p_allowed_usuario_uuid UUID,
+    p_permiso              VARCHAR(80) DEFAULT 'VIEW'
+) RETURNS BOOLEAN AS $$
+DECLARE
+    v_rows_updated INT;
+BEGIN
+    UPDATE permisos.user_whitelist
+    SET revoked_at = NOW()
+    WHERE resource_type        = p_resource_type
+      AND resource_id          = p_resource_id
+      AND allowed_usuario_uuid = p_allowed_usuario_uuid
+      AND permiso              = p_permiso
+      AND revoked_at           IS NULL;
+
+    GET DIAGNOSTICS v_rows_updated = ROW_COUNT;
+    RETURN v_rows_updated > 0;
 END;
 $$ LANGUAGE plpgsql;
 
