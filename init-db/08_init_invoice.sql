@@ -108,6 +108,60 @@ CREATE INDEX idx_control_cambios_usuario
 CREATE INDEX idx_control_cambios_correlation
     ON factura.control_cambios (correlation_id);
 
+
+
+--   El consentimiento necesita: inmutabilidad garantizada, versión de términos,
+--   y transición atómica de estado.
+-- =============================================================================
+
+-- ─────────────────────────────────────────────────────────
+-- 1. CATÁLOGO DE VERSIONES DE TÉRMINOS
+-- ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS factura.version_terminos (
+    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo          VARCHAR(20)  NOT NULL UNIQUE,   -- 'v1.0', 'v2.1'
+    descripcion     VARCHAR(255) NOT NULL,
+    texto_completo  TEXT         NOT NULL,
+    hash_sha256     CHAR(64)     NOT NULL,           -- prueba de qué texto vio el usuario
+    activo          BOOLEAN      NOT NULL DEFAULT TRUE,
+    vigente_desde   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    vigente_hasta   TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- Solo una versión activa a la vez
+CREATE UNIQUE INDEX uq_version_terminos_activa
+    ON factura.version_terminos (activo)
+    WHERE activo = TRUE;
+
+
+-- ─────────────────────────────────────────────────────────
+-- 2. REGISTRO DE CONSENTIMIENTO (APPEND-ONLY)
+-- ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS factura.autorizacion_publicacion (
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    factura_id          UUID        NOT NULL REFERENCES factura.factura(id),
+    usuario_uuid        UUID        NOT NULL REFERENCES core.usuario(usuario_uuid),
+    organizacion_id     UUID        NOT NULL REFERENCES core.organizacion(organizacion_uuid),
+    version_terminos_id UUID        NOT NULL REFERENCES factura.version_terminos(id),
+    acepto              BOOLEAN     NOT NULL,        -- TRUE = aceptó, FALSE = rechazó
+    ip_address          INET,
+    user_agent          TEXT,
+    correlation_id      UUID,                        -- mismo correlation_id de la factura
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Solo UN acepto=TRUE por factura
+CREATE UNIQUE INDEX uq_autorizacion_aceptada_por_factura
+    ON factura.autorizacion_publicacion (factura_id)
+    WHERE acepto = TRUE;
+
+CREATE INDEX idx_autorizacion_factura    ON factura.autorizacion_publicacion (factura_id, created_at DESC);
+CREATE INDEX idx_autorizacion_usuario    ON factura.autorizacion_publicacion (usuario_uuid, created_at DESC);
+CREATE INDEX idx_autorizacion_correlation ON factura.autorizacion_publicacion (correlation_id);
+
+
+
 -- =========================================================
 -- CONTROL DE CAMBIOS AUTOMATICO (TRIGGERS)
 -- =========================================================
@@ -375,6 +429,69 @@ CREATE TRIGGER tr_control_cambios_ofertas
 AFTER INSERT OR UPDATE OR DELETE ON factura.ofertas
 FOR EACH ROW EXECUTE FUNCTION factura.tr_registrar_control_cambios();
 
+-- ─────────────────────────────────────────────────────────
+-- 3. TRIGGER: INMUTABILIDAD
+-- Ningún UPDATE ni DELETE es posible, ni por ADMIN.
+-- ─────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION factura.tr_autorizacion_immutable()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION
+        'autorizacion_publicacion es append-only — % no está permitido. '
+        'Un consentimiento registrado no puede modificarse.', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_autorizacion_no_mutate
+BEFORE UPDATE OR DELETE ON factura.autorizacion_publicacion
+FOR EACH ROW EXECUTE FUNCTION factura.tr_autorizacion_immutable();
+
+-- ─────────────────────────────────────────────────────────
+-- 4. TRIGGER: TRANSICIÓN ATÓMICA DE ESTADO
+-- acepto=TRUE → factura pasa a PUBLICADA en la misma TX.
+-- Si el UPDATE falla, el INSERT también se revierte.
+-- ─────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION factura.tr_publicar_tras_autorizacion()
+RETURNS TRIGGER AS $$
+DECLARE v_updated INT;
+BEGIN
+    IF NEW.acepto = FALSE THEN RETURN NEW; END IF;
+
+    UPDATE factura.factura
+       SET status = 'PUBLICADA', updated_at = now()
+     WHERE id     = NEW.factura_id
+       AND status = 'PENDIENTE_AUTORIZACION';
+
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+
+    IF v_updated = 0 THEN
+        RAISE EXCEPTION
+            'No se puede publicar factura % — estado inválido o ya publicada.',
+            NEW.factura_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_publicar_tras_autorizacion
+AFTER INSERT ON factura.autorizacion_publicacion
+FOR EACH ROW EXECUTE FUNCTION factura.tr_publicar_tras_autorizacion();
+
+
+-- ─────────────────────────────────────────────────────────
+-- 5. HELPER: verificar consentimiento vigente
+-- ─────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION factura.tiene_autorizacion_vigente(p_factura_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM factura.autorizacion_publicacion
+        WHERE factura_id = p_factura_id AND acepto = TRUE
+    );
+END;
+$$ LANGUAGE plpgsql STABLE;
+
 -- Índice para buscar rápido "con quién ha trabajado esta empresa"
 CREATE INDEX idx_historial_relacion ON factura.historial_negocios (organizacion_id, usuario_id);
 CREATE INDEX idx_historial_financiadora_relacion ON factura.historial_negocios (organizacion_id, financiadora_id, usuario_id);
@@ -508,6 +625,19 @@ FROM factura.factura f
 LEFT JOIN factura.relaciones_preferidas r
     ON r.organizacion_id = f.organizacion_id
 WHERE f.status = 'PUBLICADA';
+
+-- ─────────────────────────────────────────────────────────
+-- 6. VERSIÓN INICIAL DE TÉRMINOS
+-- Antes de producción, actualiza hash_sha256 con:
+--   SELECT encode(sha256('<texto_completo>'::bytea), 'hex');
+-- ─────────────────────────────────────────────────────────
+INSERT INTO factura.version_terminos (codigo, descripcion, texto_completo, hash_sha256)
+VALUES (
+    'v1.0',
+    'Términos iniciales de publicación en marketplace SEIS',
+    'Al aceptar, autorizas la publicación de la factura en el marketplace SEIS y la notificación a entidades financieras para su evaluación. Declaras que la información es verídica y que tienes plena autoridad para ceder los derechos de cobro. Esta autorización queda registrada de forma permanente junto a los datos de tu sesión.',
+    (SELECT encode(sha256('Al aceptar, autorizas la publicación de la factura en el marketplace SEIS y la notificación a entidades financieras para su evaluación. Declaras que la información es verídica y que tienes plena autoridad para ceder los derechos de cobro. Esta autorización queda registrada de forma permanente junto a los datos de tu sesión.'::bytea), 'hex'))
+) ON CONFLICT (codigo) DO NOTHING;
 
 -- =========================================================
 -- CONSULTAS UTILES (PARAMETRIZABLES)
