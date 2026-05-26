@@ -446,37 +446,7 @@ CREATE TRIGGER tr_autorizacion_no_mutate
 BEFORE UPDATE OR DELETE ON factura.autorizacion_publicacion
 FOR EACH ROW EXECUTE FUNCTION factura.tr_autorizacion_immutable();
 
--- ─────────────────────────────────────────────────────────
--- 4. TRIGGER: TRANSICIÓN ATÓMICA DE ESTADO
--- acepto=TRUE → factura pasa a PUBLICADA en la misma TX.
--- Si el UPDATE falla, el INSERT también se revierte.
--- ─────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION factura.tr_publicar_tras_autorizacion()
-RETURNS TRIGGER AS $$
-DECLARE v_updated INT;
-BEGIN
-    IF NEW.acepto = FALSE THEN RETURN NEW; END IF;
 
-    UPDATE factura.factura
-       SET status = 'PUBLICADA', updated_at = now()
-     WHERE id     = NEW.factura_id
-       AND status = 'PENDIENTE_AUTORIZACION';
-
-    GET DIAGNOSTICS v_updated = ROW_COUNT;
-
-    IF v_updated = 0 THEN
-        RAISE EXCEPTION
-            'No se puede publicar factura % — estado inválido o ya publicada.',
-            NEW.factura_id;
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_publicar_tras_autorizacion
-AFTER INSERT ON factura.autorizacion_publicacion
-FOR EACH ROW EXECUTE FUNCTION factura.tr_publicar_tras_autorizacion();
 
 
 -- ─────────────────────────────────────────────────────────
