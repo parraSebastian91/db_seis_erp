@@ -553,9 +553,294 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =========================================================
--- 12. VISTAS PRÁCTICAS PARA REPORTING Y ACCESO A DATOS
+-- 12. TRIGGER: auto-registrar propietario al crear una factura
+-- Cuando se inserta una factura:
+--   - El gestor queda como propietario principal (es_propietario_principal = TRUE).
+--   - Su jefe directo (resuelto vía core.grupo_miembro.jefe_directo_id)
+--     queda registrado como co-propietario (es_propietario_principal = FALSE).
+-- Si el gestor pertenece a varios grupos, se registra cada jefe distinto una vez.
+-- =========================================================
+CREATE OR REPLACE FUNCTION permisos.fn_auto_register_factura_owner()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_jefe_uuid      UUID;
+    v_jefe_org_id    UUID;
+BEGIN
+    -- 1. Registrar al gestor como propietario principal
+    INSERT INTO permisos.resource_owner (
+        resource_type,
+        resource_id,
+        owner_usuario_uuid,
+        organizacion_id,
+        es_propietario_principal
+    ) VALUES (
+        'FACTURA',
+        NEW.id,
+        NEW.gestor_usuario_uuid,
+        NEW.organizacion_id,
+        TRUE
+    )
+    ON CONFLICT (resource_type, resource_id, owner_usuario_uuid) DO NOTHING;
+
+    -- 2. Registrar al jefe directo de cada grupo donde el gestor es miembro activo
+    --    jefe_directo_id → miembro_id del jefe → su usuario_uuid
+    FOR v_jefe_uuid, v_jefe_org_id IN
+        SELECT DISTINCT
+            jm_jefe.usuario_uuid,
+            gt.organizacion_id
+        FROM core.grupo_miembro gm_gestor
+        JOIN core.grupo_miembro jm_jefe
+            ON jm_jefe.miembro_id = gm_gestor.jefe_directo_id
+           AND jm_jefe.active = TRUE
+        JOIN core.grupo_trabajo gt
+            ON gt.grupo_id = gm_gestor.grupo_id
+           AND gt.activo = TRUE
+        WHERE gm_gestor.usuario_uuid = NEW.gestor_usuario_uuid
+          AND gm_gestor.active = TRUE
+          AND gm_gestor.jefe_directo_id IS NOT NULL
+          -- No re-registrar si el jefe es el mismo gestor (dato inválido, pero seguro)
+          AND jm_jefe.usuario_uuid <> NEW.gestor_usuario_uuid
+    LOOP
+        INSERT INTO permisos.resource_owner (
+            resource_type,
+            resource_id,
+            owner_usuario_uuid,
+            organizacion_id,
+            es_propietario_principal
+        ) VALUES (
+            'FACTURA',
+            NEW.id,
+            v_jefe_uuid,
+            v_jefe_org_id,
+            FALSE
+        )
+        ON CONFLICT (resource_type, resource_id, owner_usuario_uuid) DO NOTHING;
+    END LOOP;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_factura_register_owner
+    AFTER INSERT ON factura.factura
+    FOR EACH ROW
+    EXECUTE FUNCTION permisos.fn_auto_register_factura_owner();
+
+-- =========================================================
+-- 12.B VISTAS PRÁCTICAS PARA REPORTING Y ACCESO A DATOS
 -- =========================================================
 
+-- Base reutilizable: facturas visibles en marketplace (publicadas/ofertadas)
+-- Trae solo facturas con estado PUBLICADA u OFERTADA.
+-- Incluye resumen de ofertas (total, enviadas, revisadas, aceptadas, rechazadas, mejor tasa, mejor monto).
+CREATE OR REPLACE VIEW permisos.vw_facturas_publicadas_ofertadas_base AS
+SELECT
+    f.id AS factura_id,
+    f.organizacion_id AS cedente_org_id,
+    org.razon_social AS cedente_razon_social,
+    f.deudor_nombre,
+    f.deudor_rut,
+    f.factura_numero,
+    f.monto_total,
+    f.fecha_vencimiento,
+    f.status::VARCHAR AS factura_status,
+    f.created_at,
+    f.updated_at,
+    COALESCE(r.total_ofertas, 0) AS total_ofertas,
+    COALESCE(r.ofertas_enviadas, 0) AS ofertas_enviadas,
+    COALESCE(r.ofertas_revisadas, 0) AS ofertas_revisadas,
+    COALESCE(r.ofertas_aceptadas, 0) AS ofertas_aceptadas,
+    COALESCE(r.ofertas_rechazadas, 0) AS ofertas_rechazadas,
+    r.mejor_tasa,
+    r.mejor_monto_oferta,
+    r.ultima_actualizacion_oferta,
+    (COALESCE(r.total_ofertas, 0) > 0) AS esta_ofertada
+FROM factura.factura f
+JOIN core.organizacion org
+    ON org.organizacion_uuid = f.organizacion_id
+LEFT JOIN factura.vw_factura_ofertas_resumen r
+    ON r.factura_id = f.id
+WHERE f.status IN ('PUBLICADA', 'OFERTADA');
+
+-- Devuelve únicamente facturas donde el usuario sí tiene VIEW.
+-- Evalúa permisos con permisos.check_access para:
+-- organización explícita (si la pasas),
+-- organizaciones del usuario por grupos,
+-- y fallback de organización cedente (para no perder visibilidad de propietario).
+CREATE OR REPLACE FUNCTION permisos.obtener_facturas_accesibles(
+    p_usuario_uuid UUID,
+    p_organizacion_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+    factura_id UUID,
+    cedente_org_id UUID,
+    cedente_razon_social VARCHAR,
+    deudor_nombre VARCHAR,
+    deudor_rut VARCHAR,
+    factura_numero VARCHAR,
+    monto_total VARCHAR,
+    fecha_vencimiento DATE,
+    factura_status VARCHAR,
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ,
+    total_ofertas BIGINT,
+    ofertas_enviadas BIGINT,
+    ofertas_revisadas BIGINT,
+    ofertas_aceptadas BIGINT,
+    ofertas_rechazadas BIGINT,
+    mejor_tasa NUMERIC,
+    mejor_monto_oferta NUMERIC,
+    ultima_actualizacion_oferta TIMESTAMPTZ,
+    esta_ofertada BOOLEAN,
+    tiene_permiso BOOLEAN,
+    org_contexto_uuid UUID
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH orgs_usuario AS (
+        SELECT DISTINCT gt.organizacion_id
+        FROM core.grupo_miembro gm
+        JOIN core.grupo_trabajo gt
+            ON gt.grupo_id = gm.grupo_id
+        WHERE gm.usuario_uuid = p_usuario_uuid
+          AND gm.active = TRUE
+          AND gt.activo = TRUE
+    ),
+    base AS (
+        SELECT *
+        FROM permisos.vw_facturas_publicadas_ofertadas_base
+    )
+    SELECT
+        b.factura_id,
+        b.cedente_org_id,
+        b.cedente_razon_social,
+        b.deudor_nombre,
+        b.deudor_rut,
+        b.factura_numero,
+        b.monto_total,
+        b.fecha_vencimiento,
+        b.factura_status,
+        b.created_at,
+        b.updated_at,
+        b.total_ofertas,
+        b.ofertas_enviadas,
+        b.ofertas_revisadas,
+        b.ofertas_aceptadas,
+        b.ofertas_rechazadas,
+        b.mejor_tasa,
+        b.mejor_monto_oferta,
+        b.ultima_actualizacion_oferta,
+        b.esta_ofertada,
+        TRUE AS tiene_permiso,
+        COALESCE(p_organizacion_id, b.cedente_org_id) AS org_contexto_uuid
+    FROM base b
+    WHERE EXISTS (
+        SELECT 1
+        FROM (
+            SELECT p_organizacion_id AS org_id
+            WHERE p_organizacion_id IS NOT NULL
+
+            UNION
+
+            SELECT o.organizacion_id
+            FROM orgs_usuario o
+            WHERE p_organizacion_id IS NULL
+
+            UNION
+
+            SELECT b.cedente_org_id
+            WHERE p_organizacion_id IS NULL
+        ) contexto
+        WHERE permisos.check_access(
+            'FACTURA',
+            b.factura_id,
+            p_usuario_uuid,
+            'VIEW',
+            contexto.org_id
+        )
+    )
+    ORDER BY b.created_at DESC;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- Vista por organización financiera (útil para paneles por org).
+-- Muestra facturas publicadas/ofertadas donde existe al menos un permiso
+-- VIEW activo para alguno de los grupos de esa organización.
+CREATE OR REPLACE VIEW permisos.vw_facturas_accesibles_por_org AS
+SELECT
+    b.*,
+    gt.organizacion_id AS financiera_org_id,
+    COUNT(DISTINCT ap.id) AS total_politicas_view_activas
+FROM permisos.vw_facturas_publicadas_ofertadas_base b
+JOIN permisos.access_policy ap
+    ON ap.resource_type = 'FACTURA'
+   AND (ap.resource_id = b.factura_id OR ap.resource_id IS NULL)
+   AND ap.permiso = 'VIEW'
+   AND ap.revoked_at IS NULL
+   AND (ap.expires_at IS NULL OR ap.expires_at > NOW())
+JOIN core.grupo_trabajo gt
+    ON gt.grupo_id = ap.grantee_grupo_id
+   AND gt.activo = TRUE
+GROUP BY
+    b.factura_id,
+    b.cedente_org_id,
+    b.cedente_razon_social,
+    b.deudor_nombre,
+    b.deudor_rut,
+    b.factura_numero,
+    b.monto_total,
+    b.fecha_vencimiento,
+    b.factura_status,
+    b.created_at,
+    b.updated_at,
+    b.total_ofertas,
+    b.ofertas_enviadas,
+    b.ofertas_revisadas,
+    b.ofertas_aceptadas,
+    b.ofertas_rechazadas,
+    b.mejor_tasa,
+    b.mejor_monto_oferta,
+    b.ultima_actualizacion_oferta,
+    b.esta_ofertada,
+    gt.organizacion_id;
+
+-- Consultas listas para usar:
+
+-- Listado para un usuario (cualquier portal), sin fijar org:
+-- check_access
+
+-- Listado para un usuario dentro de una org específica (portal financiadora o cedente):
+-- SELECT *
+-- FROM permisos.obtener_facturas_accesibles(
+-- 'UUID_USUARIO'::UUID,
+-- 'UUID_ORGANIZACION'::UUID
+-- );
+
+-- Panel por organización financiera:
+-- SELECT *
+-- FROM permisos.vw_facturas_accesibles_por_org
+-- WHERE financiera_org_id = 'UUID_ORGANIZACION_FINANCIADORA'::UUID
+-- ORDER BY created_at DESC;Consultas listas para usar:
+
+-- Listado para un usuario (cualquier portal), sin fijar org:
+-- SELECT *
+-- FROM permisos.obtener_facturas_accesibles(
+-- 'UUID_USUARIO'::UUID,
+-- NULL
+-- );
+
+-- Listado para un usuario dentro de una org específica (portal financiadora o cedente):
+-- SELECT *
+-- FROM permisos.obtener_facturas_accesibles(
+-- 'UUID_USUARIO'::UUID,
+-- 'UUID_ORGANIZACION'::UUID
+-- );
+
+-- Panel por organización financiera:
+-- SELECT *
+-- FROM permisos.vw_facturas_accesibles_por_org
+-- WHERE financiera_org_id = 'UUID_ORGANIZACION_FINANCIADORA'::UUID
+-- ORDER BY created_at DESC;
 
 -- =========================================================
 -- 13. GRANTS AL ROL DE DESARROLLO
