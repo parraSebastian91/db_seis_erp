@@ -660,7 +660,7 @@ JOIN core.organizacion org
     ON org.organizacion_uuid = f.organizacion_id
 LEFT JOIN factura.vw_factura_ofertas_resumen r
     ON r.factura_id = f.id
-WHERE f.status IN ('PUBLICADA', 'OFERTADA');
+--WHERE f.status IN ('PUBLICADA', 'OFERTADA');
 
 -- Devuelve únicamente facturas donde el usuario sí tiene VIEW.
 -- Evalúa permisos con permisos.check_access para:
