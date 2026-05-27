@@ -638,6 +638,8 @@ SELECT
     f.id AS factura_id,
     f.organizacion_id AS cedente_org_id,
     org.razon_social AS cedente_razon_social,
+    CONCAT(org.rut,'-',org.dv) AS cedente_rut,
+    f.asset_id,
     f.deudor_nombre,
     f.deudor_rut,
     f.factura_numero,
@@ -654,12 +656,27 @@ SELECT
     r.mejor_tasa,
     r.mejor_monto_oferta,
     r.ultima_actualizacion_oferta,
-    (COALESCE(r.total_ofertas, 0) > 0) AS esta_ofertada
+    (COALESCE(r.total_ofertas, 0) > 0) AS esta_ofertada,
+    mv.url_path,
+    f.gestor_usuario_uuid as gestor_uuid,
+    u.userName as username,
+    f.correlation_id
 FROM factura.factura f
 JOIN core.organizacion org
     ON org.organizacion_uuid = f.organizacion_id
 LEFT JOIN factura.vw_factura_ofertas_resumen r
     ON r.factura_id = f.id
+join core.usuario u 
+	on u.usuario_uuid = f.gestor_usuario_uuid 
+LEFT JOIN media.media_assets ma
+    ON ma.id = f.asset_id 
+LEFT JOIN LATERAL (
+    SELECT mv.url_path
+    FROM media.media_variants mv
+    WHERE mv.asset_id = COALESCE(ma.id, f.asset_id)
+    ORDER BY mv.created_at DESC NULLS LAST
+    LIMIT 1
+) mv ON TRUE
 --WHERE f.status IN ('PUBLICADA', 'OFERTADA');
 
 -- Devuelve únicamente facturas donde el usuario sí tiene VIEW.
@@ -667,6 +684,7 @@ LEFT JOIN factura.vw_factura_ofertas_resumen r
 -- organización explícita (si la pasas),
 -- organizaciones del usuario por grupos,
 -- y fallback de organización cedente (para no perder visibilidad de propietario).
+
 CREATE OR REPLACE FUNCTION permisos.obtener_facturas_accesibles(
     p_usuario_uuid UUID,
     p_organizacion_id UUID DEFAULT NULL
@@ -675,6 +693,7 @@ RETURNS TABLE (
     factura_id UUID,
     cedente_org_id UUID,
     cedente_razon_social VARCHAR,
+    cedente_rut VARCHAR,
     deudor_nombre VARCHAR,
     deudor_rut VARCHAR,
     factura_numero VARCHAR,
@@ -693,7 +712,12 @@ RETURNS TABLE (
     ultima_actualizacion_oferta TIMESTAMPTZ,
     esta_ofertada BOOLEAN,
     tiene_permiso BOOLEAN,
-    org_contexto_uuid UUID
+    org_contexto_uuid UUID,
+    url_factura VARCHAR,
+    gestor_uuid UUID,
+    gestor_username VARCHAR,
+    correlation_id UUID,
+    asset_id UUID
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -714,6 +738,7 @@ BEGIN
         b.factura_id,
         b.cedente_org_id,
         b.cedente_razon_social,
+        b.cedente_rut::VARCHAR,
         b.deudor_nombre,
         b.deudor_rut,
         b.factura_numero,
@@ -732,7 +757,12 @@ BEGIN
         b.ultima_actualizacion_oferta,
         b.esta_ofertada,
         TRUE AS tiene_permiso,
-        COALESCE(p_organizacion_id, b.cedente_org_id) AS org_contexto_uuid
+        COALESCE(p_organizacion_id, b.cedente_org_id) AS org_contexto_uuid,
+        COALESCE(b.url_path::VARCHAR, ''::VARCHAR) AS url_factura,
+		b.gestor_uuid,
+		b.username as gestor_username,
+		b.correlation_id,
+		b.asset_id
     FROM base b
     WHERE EXISTS (
         SELECT 1
