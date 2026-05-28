@@ -14,6 +14,7 @@ CREATE TYPE factura.factura_status AS ENUM (
 );
 
 CREATE TYPE factura.offer_status AS ENUM ('ENVIADA', 'REVISADA', 'ACEPTADA', 'RECHAZADA');
+CREATE TYPE factura.create_by AS ENUM ('FORM', 'OCR', 'AGENT');
 
 CREATE TABLE
     factura.factura (
@@ -32,6 +33,7 @@ CREATE TABLE
         updated_at TIMESTAMP
         WITH
             TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_by factura.create_by NOT NULL DEFAULT 'FORM',
         CONSTRAINT unique_factura_emisor_folio UNIQUE (organizacion_id, deudor_rut, factura_numero)
     );
 
