@@ -553,6 +553,44 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =========================================================
+-- 10.B FUNCIÓN: revoke_access_from_organization_groups
+-- Revoca el permiso de TODOS los grupos de trabajo activos de una organización
+-- sobre un recurso específico. Imagen espejo de grant_access_to_organization_groups.
+--
+-- Parámetros:
+--   p_resource_type:   tipo de recurso (ej: 'FACTURA')
+--   p_resource_id:     ID del recurso (ej: factura UUID)
+--   p_target_org_id:   organización cuyos grupos perderán el acceso
+--   p_permiso:         el permiso a revocar (default: 'VIEW')
+--
+-- Retorna: número de políticas revocadas (grupos afectados)
+-- =========================================================
+CREATE OR REPLACE FUNCTION permisos.revoke_access_from_organization_groups(
+    p_resource_type VARCHAR(80),
+    p_resource_id   UUID,
+    p_target_org_id UUID,
+    p_permiso       VARCHAR(80) DEFAULT 'VIEW'
+) RETURNS INT AS $$
+DECLARE
+    v_rows_updated INT := 0;
+BEGIN
+    UPDATE permisos.access_policy ap
+    SET revoked_at = NOW()
+    FROM core.grupo_trabajo gt
+    WHERE gt.grupo_id        = ap.grantee_grupo_id
+      AND gt.organizacion_id = p_target_org_id
+      AND gt.activo          = TRUE
+      AND ap.resource_type   = p_resource_type
+      AND ap.resource_id     = p_resource_id
+      AND ap.permiso         = p_permiso
+      AND ap.revoked_at      IS NULL;
+
+    GET DIAGNOSTICS v_rows_updated = ROW_COUNT;
+    RETURN v_rows_updated;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================================================
 -- 12. TRIGGER: auto-registrar propietario al crear una factura
 -- Cuando se inserta una factura:
 --   - El gestor queda como propietario principal (es_propietario_principal = TRUE).
