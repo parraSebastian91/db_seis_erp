@@ -39,13 +39,11 @@ INSERT INTO core.tipo_contacto (tipo_contacto_id, nombre, descripcion) VALUES
 (5, 'Empleado', 'Contacto de empleado')
 ON CONFLICT (tipo_contacto_id) DO NOTHING;
 
-INSERT INTO core.tipo_direccion_organizacion (codigo, nombre) VALUES
-('TRIBUTARIA',  'Dirección Tributaria'),
-('CASA_MATRIZ', 'Casa Matriz'),
-('SUCURSAL',    'Sucursal'),
-('BODEGA',      'Bodega'),
-('ATENCION',    'Punto de Atención')
-ON CONFLICT (codigo) DO NOTHING;
+INSERT INTO core.tipo_direccion_organizacion (tipo_direccion_id, codigo, nombre) VALUES(1, 'TRIBUTARIA', 'Dirección Tributaria');
+INSERT INTO core.tipo_direccion_organizacion (tipo_direccion_id, codigo, nombre) VALUES(2, 'CASA_MATRIZ', 'Casa Matriz');
+INSERT INTO core.tipo_direccion_organizacion (tipo_direccion_id, codigo, nombre) VALUES(3, 'SUCURSAL', 'Sucursal');
+INSERT INTO core.tipo_direccion_organizacion (tipo_direccion_id, codigo, nombre) VALUES(4, 'BODEGA', 'Bodega');
+INSERT INTO core.tipo_direccion_organizacion (tipo_direccion_id, codigo, nombre) VALUES(5, 'ATENCION', 'Punto de Atención');
 
 -- ============================================
 -- 2) CONTACTOS (nueva estructura: nombres/apellidos, sin url)
