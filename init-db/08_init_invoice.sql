@@ -19,7 +19,6 @@ CREATE TYPE factura.create_by AS ENUM ('FORM', 'OCR', 'AGENT');
 CREATE TABLE
     factura.factura (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        asset_id UUID REFERENCES media.media_assets (id), -- Tu tabla de storage
         organizacion_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- Empresa que sube la factura
         deudor_nombre VARCHAR(255) NOT NULL, -- Nombre del deudor (extraído por OCR)
         deudor_rut VARCHAR(255) NOT NULL, -- RUT del que debe pagar la factura (extraído por OCR)
@@ -36,6 +35,27 @@ CREATE TABLE
         created_by factura.create_by NOT NULL DEFAULT 'FORM',
         CONSTRAINT unique_factura_emisor_folio UNIQUE (organizacion_id, deudor_rut, factura_numero)
     );
+
+-- Relación N:M entre factura y sus archivos adjuntos en MinIO (via media.media_assets)
+CREATE TABLE factura.factura_adjuntos (
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    factura_id     UUID        NOT NULL REFERENCES factura.factura(id) ON DELETE CASCADE,
+    asset_id       UUID        NOT NULL REFERENCES media.media_assets(id),
+    tipo           VARCHAR(50) NOT NULL DEFAULT 'FACTURA_ORIGINAL', -- FACTURA_ORIGINAL, CEDULA_REPRESENTANTE, CONTRATO, ANEXO, OTRO
+    es_principal   BOOLEAN     NOT NULL DEFAULT FALSE,             -- Solo 1 TRUE por factura (enforced por índice parcial)
+    orden          SMALLINT    NOT NULL DEFAULT 0,                 -- Orden de presentación en visor documental
+    descripcion    VARCHAR(255),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_factura_adjunto_asset UNIQUE (factura_id, asset_id)
+);
+
+-- Solo un adjunto principal por factura
+CREATE UNIQUE INDEX uq_factura_adjunto_principal
+    ON factura.factura_adjuntos (factura_id)
+    WHERE es_principal = TRUE;
+
+CREATE INDEX idx_factura_adjuntos_factura_id ON factura.factura_adjuntos (factura_id);
+CREATE INDEX idx_factura_adjuntos_asset_id  ON factura.factura_adjuntos (asset_id);
 
 CREATE TABLE
     factura.ofertas (

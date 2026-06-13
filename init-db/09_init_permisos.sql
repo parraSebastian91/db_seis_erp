@@ -677,7 +677,6 @@ SELECT
     f.organizacion_id AS cedente_org_id,
     org.razon_social AS cedente_razon_social,
     CONCAT(org.rut,'-',org.dv) AS cedente_rut,
-    f.asset_id,
     f.deudor_nombre,
     f.deudor_rut,
     f.factura_numero,
@@ -698,7 +697,8 @@ SELECT
     mv.url_path,
     f.gestor_usuario_uuid as gestor_uuid,
     u.userName as username,
-    f.correlation_id
+    f.correlation_id,
+    adj.adjuntos
 FROM factura.factura f
 JOIN core.organizacion org
     ON org.organizacion_uuid = f.organizacion_id
@@ -706,15 +706,38 @@ LEFT JOIN factura.vw_factura_ofertas_resumen r
     ON r.factura_id = f.id
 join core.usuario u 
 	on u.usuario_uuid = f.gestor_usuario_uuid 
-LEFT JOIN media.media_assets ma
-    ON ma.id = f.asset_id 
 LEFT JOIN LATERAL (
+    -- URL del adjunto principal (es_principal = TRUE) para el visor documental
     SELECT mv.url_path
-    FROM media.media_variants mv
-    WHERE mv.asset_id = COALESCE(ma.id, f.asset_id)
+    FROM factura.factura_adjuntos fa
+    JOIN media.media_variants mv ON mv.asset_id = fa.asset_id
+    WHERE fa.factura_id = f.id AND fa.es_principal = TRUE
     ORDER BY mv.created_at DESC NULLS LAST
     LIMIT 1
 ) mv ON TRUE
+LEFT JOIN LATERAL (
+    -- JSON array de todos los adjuntos con su URL resuelta desde media_variants
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'id',           fa.id,
+            'asset_id',     fa.asset_id,
+            'tipo',         fa.tipo,
+            'es_principal', fa.es_principal,
+            'orden',        fa.orden,
+            'descripcion',  fa.descripcion,
+            'url_path',     mv_adj.url_path
+        ) ORDER BY fa.orden ASC, fa.created_at ASC
+    ) AS adjuntos
+    FROM factura.factura_adjuntos fa
+    LEFT JOIN LATERAL (
+        SELECT mv2.url_path
+        FROM media.media_variants mv2
+        WHERE mv2.asset_id = fa.asset_id
+        ORDER BY mv2.created_at DESC NULLS LAST
+        LIMIT 1
+    ) mv_adj ON TRUE
+    WHERE fa.factura_id = f.id
+) adj ON TRUE
 --WHERE f.status IN ('PUBLICADA', 'OFERTADA');
 
 -- Devuelve únicamente facturas donde el usuario sí tiene VIEW.
@@ -755,7 +778,7 @@ RETURNS TABLE (
     gestor_uuid UUID,
     gestor_username VARCHAR,
     correlation_id UUID,
-    asset_id UUID
+    adjuntos JSONB
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -800,7 +823,7 @@ BEGIN
 		b.gestor_uuid,
 		b.username as gestor_username,
 		b.correlation_id,
-		b.asset_id
+		b.adjuntos
     FROM base b
     WHERE EXISTS (
         SELECT 1
@@ -870,6 +893,12 @@ GROUP BY
     b.mejor_monto_oferta,
     b.ultima_actualizacion_oferta,
     b.esta_ofertada,
+    b.cedente_rut,
+    b.url_path,
+    b.gestor_uuid,
+    b.username,
+    b.correlation_id,
+    b.adjuntos,
     gt.organizacion_id;
 
 -- Consultas listas para usar:
