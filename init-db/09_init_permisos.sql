@@ -414,7 +414,10 @@ BEGIN
 
     -- ── 3. Obtener la key solo si tiene permiso ──────────────────────────────
     IF v_tiene_permiso THEN
-        SELECT mv.url_path INTO v_storage_key
+        -- REGEXP_REPLACE normaliza espacios → '_' para cubrir el caso en que el
+        -- worker guardó el nombre original (con espacios) pero MinIO recibió la
+        -- clave sanitizada (con guiones bajos). Defensa en profundidad.
+        SELECT REGEXP_REPLACE(mv.url_path, '\s+', '_', 'g') INTO v_storage_key
         FROM media.media_variants mv
         WHERE mv.asset_id = p_asset_id
         ORDER BY mv.created_at DESC NULLS LAST
