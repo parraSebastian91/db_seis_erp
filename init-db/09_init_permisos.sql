@@ -342,7 +342,105 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =========================================================
--- 11. FUNCIÓN: grant_user_whitelist_access
+-- 7.B FUNCIÓN: get_asset_storage_key
+-- Devuelve la storage key (url_path en MinIO) de un asset.
+-- Valida el permiso del usuario ANTES de entregar la key y
+-- registra el intento en permisos.access_audit (ALLOWED o DENIED).
+--
+-- Lógica de permiso:
+--   Si el asset es adjunto de una factura → valida 'FACTURA' VIEW
+--   Si es un asset standalone              → valida 'MEDIA_ASSET' VIEW
+--
+-- Parámetros:
+--   p_asset_id        → media.media_assets.id (= factura_adjuntos.asset_id)
+--   p_usuario_uuid    → usuario que solicita el acceso
+--   p_organizacion_id → organización del usuario (contexto del permiso)
+--   p_accion          → etiqueta del intento (ej: 'DOWNLOAD', 'VIEW_VISOR')
+--   p_ip_address      → IP del cliente (para auditoría)
+--   p_correlation_id  → correlation_id de la request HTTP
+--   p_user_agent      → User-Agent del cliente
+--
+-- Retorna:
+--   storage_key → url_path del media_variant más reciente (NULL si denegado)
+--   audit_id    → UUID del registro en permisos.access_audit
+-- =========================================================
+CREATE OR REPLACE FUNCTION permisos.get_asset_storage_key(
+    p_asset_id        UUID,
+    p_usuario_uuid    UUID,
+    p_organizacion_id UUID,
+    p_accion          VARCHAR(80) DEFAULT 'VIEW',
+    p_ip_address      VARCHAR(64) DEFAULT NULL,
+    p_correlation_id  UUID        DEFAULT NULL,
+    p_user_agent      TEXT        DEFAULT NULL
+) RETURNS TABLE (
+    storage_key  TEXT,   -- object key en el bucket MinIO (url_path de media_variants)
+    audit_id     UUID    -- ID del registro de auditoría creado
+) AS $$
+DECLARE
+    v_tiene_permiso  BOOLEAN    := FALSE;
+    v_storage_key    TEXT       := NULL;
+    v_resultado      VARCHAR(20);
+    v_audit_id       UUID;
+    v_factura_id     UUID;
+    v_resource_type  VARCHAR(80);
+    v_resource_id    UUID;
+BEGIN
+    -- ── 1. Resolver el contexto de permiso ───────────────────────────────────
+    -- Busca si el asset está vinculado a una factura (es un adjunto documental).
+    -- Si lo es, el permiso se valida contra la FACTURA, no contra el asset directo.
+    SELECT fa.factura_id INTO v_factura_id
+    FROM factura.factura_adjuntos fa
+    WHERE fa.asset_id = p_asset_id
+    LIMIT 1;
+
+    IF v_factura_id IS NOT NULL THEN
+        -- Adjunto de factura: verifica que el usuario tenga VIEW sobre la factura
+        v_resource_type := 'FACTURA';
+        v_resource_id   := v_factura_id;
+    ELSE
+        -- Asset standalone (avatar, banner, etc.): verifica MEDIA_ASSET directamente
+        v_resource_type := 'MEDIA_ASSET';
+        v_resource_id   := p_asset_id;
+    END IF;
+
+    -- ── 2. Validar permiso ───────────────────────────────────────────────────
+    v_tiene_permiso := permisos.check_access(
+        v_resource_type,
+        v_resource_id,
+        p_usuario_uuid,
+        'VIEW',
+        p_organizacion_id
+    );
+
+    -- ── 3. Obtener la key solo si tiene permiso ──────────────────────────────
+    IF v_tiene_permiso THEN
+        SELECT mv.url_path INTO v_storage_key
+        FROM media.media_variants mv
+        WHERE mv.asset_id = p_asset_id
+        ORDER BY mv.created_at DESC NULLS LAST
+        LIMIT 1;
+
+        v_resultado := 'ALLOWED';
+    ELSE
+        v_resultado := 'DENIED';
+    END IF;
+
+    -- ── 4. Registrar el intento (siempre, sea ALLOWED o DENIED) ─────────────
+    v_audit_id := permisos.log_access(
+        v_resource_type,
+        v_resource_id,
+        p_usuario_uuid,
+        p_organizacion_id,
+        p_accion,
+        v_resultado,
+        p_ip_address,
+        p_user_agent,
+        p_correlation_id
+    );
+
+    RETURN QUERY SELECT v_storage_key, v_audit_id;
+END;
+$$ LANGUAGE plpgsql;
 -- Otorga acceso explícito a un usuario (idempotente).
 -- Útil para usuarios fuera de grupo de trabajo o cross-org.
 -- =========================================================
@@ -604,6 +702,11 @@ DECLARE
     v_jefe_uuid      UUID;
     v_jefe_org_id    UUID;
 BEGIN
+    -- Guard: factura sin gestor asignado no puede registrar propietario
+    IF NEW.gestor_usuario_uuid IS NULL THEN
+        RETURN NEW;
+    END IF;
+
     -- 1. Registrar al gestor como propietario principal
     INSERT INTO permisos.resource_owner (
         resource_type,
@@ -704,8 +807,8 @@ JOIN core.organizacion org
     ON org.organizacion_uuid = f.organizacion_id
 LEFT JOIN factura.vw_factura_ofertas_resumen r
     ON r.factura_id = f.id
-join core.usuario u 
-	on u.usuario_uuid = f.gestor_usuario_uuid 
+LEFT JOIN core.usuario u
+    ON u.usuario_uuid = f.gestor_usuario_uuid
 LEFT JOIN LATERAL (
     -- URL del adjunto principal (es_principal = TRUE) para el visor documental
     SELECT mv.url_path

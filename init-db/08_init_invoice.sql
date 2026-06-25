@@ -292,8 +292,8 @@ SELECT
 FROM
     factura.factura fct
     JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-    JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-    JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
 WHERE
     fct.status = 'PUBLICADA';
 
@@ -352,7 +352,10 @@ CREATE OR REPLACE FUNCTION factura.obtener_facturas_accesibles(
     status VARCHAR,
     created_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ,
-    tiene_permiso BOOLEAN
+    tiene_permiso BOOLEAN,
+    url_factura VARCHAR,
+    correlation_id UUID,
+    adjuntos JSONB
 ) AS $$
 BEGIN
     -- Verificar que el usuario sea ejecutivo de una financiadora
@@ -375,19 +378,52 @@ BEGIN
         fct.status::VARCHAR,
         fct.created_at,
         fct.updated_at,
-        permisos.check_access('FACTURA', fct.id, p_usuario_uuid, 'VIEW', p_organizacion_id) AS tiene_permiso
+        permisos.check_access('FACTURA', fct.id, p_usuario_uuid, 'VIEW', p_organizacion_id) AS tiene_permiso,
+        COALESCE(mv_principal.url_path::VARCHAR, '') AS url_factura,
+        fct.correlation_id,
+        adj_json.adjuntos
     FROM
         factura.factura fct
         JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-        JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-        JOIN core.contacto c ON u.contacto_id = c.contacto_id
+        LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+        LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
+        -- URL del adjunto principal para el visor
+        LEFT JOIN LATERAL (
+            SELECT mv.url_path
+            FROM factura.factura_adjuntos fa
+            JOIN media.media_variants mv ON mv.asset_id = fa.asset_id
+            WHERE fa.factura_id = fct.id AND fa.es_principal = TRUE
+            ORDER BY mv.created_at DESC NULLS LAST
+            LIMIT 1
+        ) mv_principal ON TRUE
+        -- JSON array de todos los adjuntos
+        LEFT JOIN LATERAL (
+            SELECT jsonb_agg(
+                jsonb_build_object(
+                    'id',           fa.id,
+                    'asset_id',     fa.asset_id,
+                    'tipo',         fa.tipo,
+                    'es_principal', fa.es_principal,
+                    'orden',        fa.orden,
+                    'descripcion',  fa.descripcion,
+                    'url_path',     mv_adj.url_path
+                ) ORDER BY fa.orden ASC, fa.created_at ASC
+            ) AS adjuntos
+            FROM factura.factura_adjuntos fa
+            LEFT JOIN LATERAL (
+                SELECT mv2.url_path
+                FROM media.media_variants mv2
+                WHERE mv2.asset_id = fa.asset_id
+                ORDER BY mv2.created_at DESC NULLS LAST
+                LIMIT 1
+            ) mv_adj ON TRUE
+            WHERE fa.factura_id = fct.id
+        ) adj_json ON TRUE
     WHERE
         fct.status = 'PUBLICADA'
         AND (
-            -- Usuario tiene acceso directo, por grupo o cross-org
             permisos.check_access('FACTURA', fct.id, p_usuario_uuid, 'VIEW', p_organizacion_id)
             OR
-            -- O es propietario
             EXISTS (
                 SELECT 1 FROM permisos.resource_owner ro
                 WHERE ro.resource_type = 'FACTURA'
@@ -427,8 +463,8 @@ SELECT
 FROM
     factura.factura fct
     JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-    JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-    JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
     -- Traer los permisos concedidos
     JOIN permisos.access_policy ap ON ap.resource_type = 'FACTURA'
         AND ap.resource_id = fct.id
