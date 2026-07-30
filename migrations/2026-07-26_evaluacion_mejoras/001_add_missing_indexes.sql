@@ -8,10 +8,6 @@
 -- ⚠️ NOTA: Schema bodega está en stand-by y NO se incluye en esta migración.
 -- =============================================================================
 
-\echo '========================================='
-\echo 'Aplicando índices faltantes en FKs...'
-\echo '========================================='
-
 BEGIN;
 
 -- ============================================================================
@@ -21,10 +17,6 @@ BEGIN;
 -- Usuario → Contacto (JOIN frecuente en autenticación)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_usuario_contacto_id 
 ON core.usuario(contacto_id);
-
--- Organizacion Direccion → Organizacion (JOIN en queries de direcciones)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_dir_organizacion_id 
-ON core.organizacion_direccion(organizacion_id);
 
 -- Grupo Miembro → Usuario (JOIN en verificación de permisos)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_grupo_miembro_usuario_uuid 
@@ -173,7 +165,20 @@ SELECT schemaname, tablename, indexname
 FROM pg_indexes 
 WHERE indexname IN (
     'idx_usuario_contacto_id',
+    'idx_org_dir_organizacion_id',SELECT schemaname, tablename, indexname 
+FROM pg_indexes 
+WHERE indexname IN (
+    'idx_usuario_contacto_id',
     'idx_org_dir_organizacion_id',
+    'idx_factura_organizacion_id',
+    'idx_ofertas_factura_id',
+    'idx_ofertas_financiadora_id',
+    'idx_media_variants_asset_id',
+    'idx_org_perfil_organizacion_id',
+    'idx_email_verification_user_id'
+)
+ORDER BY schemaname, tablename;
+
     'idx_factura_organizacion_id',
     'idx_ofertas_factura_id',
     'idx_ofertas_financiadora_id',
@@ -192,7 +197,20 @@ ORDER BY schemaname, tablename;
 \echo 'FROM pg_stat_user_indexes'
 \echo 'WHERE indexname LIKE '\''idx_%'\'''
 \echo 'ORDER BY idx_scan DESC LIMIT 20;'
-\echo ''
+\echo ''SELECT schemaname, tablename, indexname 
+FROM pg_indexes 
+WHERE indexname IN (
+    'idx_usuario_contacto_id',
+    'idx_org_dir_organizacion_id',
+    'idx_factura_organizacion_id',
+    'idx_ofertas_factura_id',
+    'idx_ofertas_financiadora_id',
+    'idx_media_variants_asset_id',
+    'idx_org_perfil_organizacion_id',
+    'idx_email_verification_user_id'
+)
+ORDER BY schemaname, tablename;
+
 
 -- =============================================================================
 -- ROLLBACK (en caso de error)
