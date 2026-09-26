@@ -42,13 +42,11 @@ $$;
 -- 1. FUNCIÓN AUXILIAR: obtener user_uuid del contexto de la transacción
 -- ---------------------------------------------------------------------------
 
+-- current_user_uuid() vive ahora en identity (00_c_init_identity_api.sql); este
+-- alias se conserva por compatibilidad y delega.
 CREATE OR REPLACE FUNCTION core.current_user_uuid()
-RETURNS UUID LANGUAGE plpgsql STABLE AS $$
-BEGIN
-    RETURN current_setting('app.user_uuid', true)::UUID;
-EXCEPTION WHEN others THEN
-    RETURN NULL;
-END;
+RETURNS UUID LANGUAGE sql STABLE AS $$
+    SELECT identity.current_user_uuid();
 $$;
 
 CREATE OR REPLACE FUNCTION core.current_org_uuid()
@@ -61,29 +59,9 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 2. RLS: identity.contacto
---    Política: el usuario solo ve/modifica su propio contacto.
---    Admins y migraciones bypasean (superusuario).
+-- 2. RLS: identity.contacto -> movida a 00_c_init_identity_api.sql
+--    (el esquema identity gobierna su propia RLS; aquí no se define nada).
 -- ---------------------------------------------------------------------------
-
-ALTER TABLE identity.contacto ENABLE ROW LEVEL SECURITY;
--- Los superusuarios y el rol de migraciones (postgres) pasan siempre
-ALTER TABLE identity.contacto FORCE ROW LEVEL SECURITY;
-
--- SELECT / UPDATE / DELETE: solo tu propio contacto
-DROP POLICY IF EXISTS pol_contacto_owner ON identity.contacto;
-CREATE POLICY pol_contacto_owner ON identity.contacto
-    FOR ALL
-    USING (
-        -- El contacto pertenece al usuario autenticado
-        contacto_id IN (
-            SELECT u.contacto_id
-            FROM identity.usuario u
-            WHERE u.usuario_uuid = core.current_user_uuid()
-        )
-        -- O el contexto no está seteado (migraciones / seeds sin SET LOCAL)
-        OR core.current_user_uuid() IS NULL
-    );
 
 -- ---------------------------------------------------------------------------
 -- 3. RLS: core.cuenta_bancaria

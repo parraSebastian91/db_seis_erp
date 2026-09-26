@@ -33,6 +33,10 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'identity_api_reader') THEN
         CREATE ROLE identity_api_reader NOLOGIN;
     END IF;
+    -- Dueño de las vistas de identity_api (ver 00_c_init_identity_api.sql).
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'identity_api_owner') THEN
+        CREATE ROLE identity_api_owner NOLOGIN;
+    END IF;
 END
 $$;
 
@@ -41,15 +45,24 @@ GRANT USAGE ON SCHEMA identity_api TO identity_api_reader;
 ALTER DEFAULT PRIVILEGES IN SCHEMA identity_api GRANT SELECT ON TABLES TO identity_api_reader;
 
 -- Mientras los servicios compartan el usuario de conexión actual, ese usuario
--- pertenece a todos los grupos (no se rompe nada). Al separar credenciales por
+-- pertenece a los grupos de datos (no se rompe nada). Al separar credenciales por
 -- servicio, quitar estas membresías y asignar cada servicio a su grupo.
 -- Tolerante: si el usuario de carga no es superusuario, las membresías se
 -- asignan antes (ver proyectos-infra/scripts/load-seis-initdb.sh).
+--
+-- ⚠️ identity_api_owner SIN herencia (WITH INHERIT FALSE, SET TRUE): solo permite
+-- SET ROLE para crear las vistas. Con herencia, el usuario de la app heredaría la
+-- política pol_contacto_api_owner (USING true) y la RLS de identity.contacto
+-- dejaría de aplicarle. Requiere PostgreSQL >= 16.
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'desarrollo')
-       AND NOT pg_has_role('desarrollo', 'identity_owner', 'MEMBER') THEN
-        GRANT identity_owner, core_owner, identity_api_reader TO desarrollo;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'desarrollo') THEN
+        IF NOT pg_has_role('desarrollo', 'identity_owner', 'MEMBER') THEN
+            GRANT identity_owner, core_owner, identity_api_reader TO desarrollo;
+        END IF;
+        IF NOT pg_has_role('desarrollo', 'identity_api_owner', 'SET') THEN
+            EXECUTE 'GRANT identity_api_owner TO desarrollo WITH INHERIT FALSE, SET TRUE';
+        END IF;
     END IF;
 EXCEPTION WHEN insufficient_privilege THEN
     RAISE NOTICE 'Sin privilegio para asignar membresías a desarrollo; asignarlas como superusuario';
