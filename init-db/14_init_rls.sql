@@ -20,7 +20,7 @@
 --   - El rol que hace BYPASS es el superusuario de migraciones (ej: postgres)
 -- =============================================================================
 
-SET search_path TO public, core, factura;
+SET search_path TO public, identity, core, factura;
 
 -- ---------------------------------------------------------------------------
 -- 0. ROL DE APLICACIÓN (no superusuario, sin bypass RLS)
@@ -61,24 +61,24 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 2. RLS: core.contacto
+-- 2. RLS: identity.contacto
 --    Política: el usuario solo ve/modifica su propio contacto.
 --    Admins y migraciones bypasean (superusuario).
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE core.contacto ENABLE ROW LEVEL SECURITY;
+ALTER TABLE identity.contacto ENABLE ROW LEVEL SECURITY;
 -- Los superusuarios y el rol de migraciones (postgres) pasan siempre
-ALTER TABLE core.contacto FORCE ROW LEVEL SECURITY;
+ALTER TABLE identity.contacto FORCE ROW LEVEL SECURITY;
 
 -- SELECT / UPDATE / DELETE: solo tu propio contacto
-DROP POLICY IF EXISTS pol_contacto_owner ON core.contacto;
-CREATE POLICY pol_contacto_owner ON core.contacto
+DROP POLICY IF EXISTS pol_contacto_owner ON identity.contacto;
+CREATE POLICY pol_contacto_owner ON identity.contacto
     FOR ALL
     USING (
         -- El contacto pertenece al usuario autenticado
         contacto_id IN (
             SELECT u.contacto_id
-            FROM core.usuario u
+            FROM identity.usuario u
             WHERE u.usuario_uuid = core.current_user_uuid()
         )
         -- O el contexto no está seteado (migraciones / seeds sin SET LOCAL)
@@ -186,7 +186,7 @@ SELECT
     activo,
     created_at,
     updated_at
-FROM core.contacto;
+FROM identity.contacto;
 
 -- Cuenta bancaria enmascarada
 CREATE OR REPLACE VIEW core.vw_cuenta_bancaria_segura AS

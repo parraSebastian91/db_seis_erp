@@ -2,7 +2,7 @@
 -- 18_init_solicitud_acceso.sql
 -- Solicitudes de acceso de colaboradores a organizaciones
 --
--- DEPENDE DE: 01_init_core.sql (core.organizacion, core.usuario)
+-- DEPENDE DE: 01_init_core.sql (core.organizacion, identity.usuario)
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -33,12 +33,12 @@ CREATE TABLE IF NOT EXISTS core.organizacion_miembro (
     organizacion_id  BIGINT  NOT NULL
                      REFERENCES core.organizacion(organizacion_id) ON DELETE CASCADE,
     usuario_uuid     UUID    NOT NULL
-                     REFERENCES core.usuario(usuario_uuid) ON DELETE CASCADE,
+                     REFERENCES identity.usuario(usuario_uuid) ON DELETE CASCADE,
     rol_codigo       VARCHAR(40) NOT NULL DEFAULT 'COLABORADOR'
                      REFERENCES core.organizacion_rol_catalog(codigo),
     activo           BOOLEAN NOT NULL DEFAULT true,
     incorporado_en   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    incorporado_por  UUID        REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    incorporado_por  UUID        REFERENCES identity.usuario(usuario_uuid) ON DELETE SET NULL,
 
     UNIQUE (organizacion_id, usuario_uuid)
 );
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS core.organizacion_solicitud_acceso (
 
     -- Quién solicita
     solicitante_uuid UUID   NOT NULL
-                     REFERENCES core.usuario(usuario_uuid) ON DELETE CASCADE,
+                     REFERENCES identity.usuario(usuario_uuid) ON DELETE CASCADE,
 
     -- Rol que solicita tener
     rol_solicitado  VARCHAR(40) NOT NULL DEFAULT 'COLABORADOR'
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS core.organizacion_solicitud_acceso (
                     CHECK (estado IN ('PENDIENTE','APROBADA','RECHAZADA','EXPIRADA','CANCELADA')),
 
     -- Quién resolvió (admin que aprobó/rechazó)
-    resuelto_por    UUID REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    resuelto_por    UUID REFERENCES identity.usuario(usuario_uuid) ON DELETE SET NULL,
     resuelto_en     TIMESTAMPTZ,
     motivo_rechazo  TEXT,
 
@@ -134,8 +134,8 @@ SELECT
     (now() > s.expira_en)       AS esta_expirada
 FROM core.organizacion_solicitud_acceso s
 JOIN core.organizacion o ON o.organizacion_id = s.organizacion_id
-JOIN core.usuario      u ON u.usuario_uuid    = s.solicitante_uuid
-JOIN core.contacto     c ON c.contacto_id     = u.contacto_id;
+JOIN identity.usuario      u ON u.usuario_uuid    = s.solicitante_uuid
+JOIN identity.contacto     c ON c.contacto_id     = u.contacto_id;
 
 COMMENT ON TABLE  core.organizacion_solicitud_acceso IS
     'Solicitudes de colaboradores para unirse a una organización. '

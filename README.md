@@ -104,8 +104,10 @@ docker-compose exec redis redis-cli
 ├── redis/
 │   └── redis.conf            # Configuración de Redis
 ├── init-db/                  # Scripts de inicialización de PostgreSQL
-│   ├── init_core.sql
-│   ├── init_core_insert.sql
+│   ├── 00_a_schemas_roles.sql   # esquemas (identity, identity_api, core...) y roles de grupo
+│   ├── 00_b_init_identity.sql   # esquema identity (gobernado por ms-identity)
+│   ├── 01_init_core.sql         # esquema core (gobernado por ms-core)
+│   ├── 02_init_core_insert.sql  # seed de desarrollo
 │   ├── init_bodega.sql
 │   └── init_bodega_insert.sql
 └── diagramas/                # Documentación de la base de datos

@@ -62,7 +62,7 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
         factura_id UUID NOT NULL REFERENCES factura.factura (id),
         financiadora_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- Empresa de factoring/financiadora
-        investor_id UUID NOT NULL REFERENCES core.usuario (usuario_uuid), -- Ejecutiva de la financiadora
+        investor_id UUID NOT NULL REFERENCES identity.usuario (usuario_uuid), -- Ejecutiva de la financiadora
         tasa DECIMAL(5, 4) NOT NULL CHECK (tasa > 0 AND tasa <= 1), -- Tasa propuesta (ej: 0.0150 para 1.5%)
         monto_oferta DECIMAL(15, 2) NOT NULL CHECK (monto_oferta > 0), -- Cuánto dinero le llegará a la empresa
         status offer_status NOT NULL DEFAULT 'ENVIADA', -- ENVIADA, REVISADA, ACEPTADA, RECHAZADA
@@ -80,7 +80,7 @@ CREATE TABLE
         factura_id UUID NOT NULL REFERENCES factura.factura (id),
         organizacion_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- El emisor
         financiadora_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- La empresa financiadora
-        usuario_id UUID NOT NULL REFERENCES core.usuario (usuario_uuid), -- La ejecutiva (Investor)
+        usuario_id UUID NOT NULL REFERENCES identity.usuario (usuario_uuid), -- La ejecutiva (Investor)
         -- Calificaciones cruzadas (Estilo Uber/Airbnb)
         calificacion_a_organizacion decimal(3, 2) CHECK (calificacion_a_organizacion BETWEEN 1 AND 5), -- Ejecutiva califica a empresa
         calificacion_a_usuario decimal(3, 2) CHECK (calificacion_a_usuario BETWEEN 1 AND 5), -- Empresa califica a ejecutiva
@@ -96,7 +96,7 @@ CREATE TABLE
     factura.relaciones_preferidas (
         organizacion_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- Cliente emisor
         financiadora_id UUID NOT NULL REFERENCES core.organizacion (organizacion_uuid), -- Empresa financiadora
-        usuario_id UUID NOT NULL REFERENCES core.usuario (usuario_uuid), -- Ejecutiva principal de la relación
+        usuario_id UUID NOT NULL REFERENCES identity.usuario (usuario_uuid), -- Ejecutiva principal de la relación
         total_operaciones INT NOT NULL DEFAULT 0 CHECK (total_operaciones >= 0),
         monto_total_acumulado DECIMAL(15, 2) NOT NULL DEFAULT 0 CHECK (monto_total_acumulado >= 0),
         promedio_calificacion_a_organizacion DECIMAL(3, 2) CHECK (promedio_calificacion_a_organizacion BETWEEN 1 AND 5),
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS factura.control_cambios (
     campo VARCHAR(100), -- Campo afectado cuando aplica
     valor_anterior TEXT,
     valor_nuevo TEXT,
-    usuario_uuid UUID REFERENCES core.usuario (usuario_uuid),
+    usuario_uuid UUID REFERENCES identity.usuario (usuario_uuid),
     correlation_id UUID,
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -163,7 +163,7 @@ CREATE UNIQUE INDEX uq_version_terminos_activa
 CREATE TABLE IF NOT EXISTS factura.autorizacion_publicacion (
     id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     factura_id          UUID        NOT NULL REFERENCES factura.factura(id),
-    usuario_uuid        UUID        NOT NULL REFERENCES core.usuario(usuario_uuid),
+    usuario_uuid        UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid),
     organizacion_id     UUID        NOT NULL REFERENCES core.organizacion(organizacion_uuid),
     version_terminos_id UUID        NOT NULL REFERENCES factura.version_terminos(id),
     acepto              BOOLEAN     NOT NULL,        -- TRUE = aceptó, FALSE = rechazó
@@ -292,8 +292,8 @@ SELECT
 FROM
     factura.factura fct
     JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-    LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-    LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    LEFT JOIN identity.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    LEFT JOIN identity.contacto c ON u.contacto_id = c.contacto_id
 WHERE
     fct.status = 'PUBLICADA';
 
@@ -308,12 +308,12 @@ CREATE OR REPLACE FUNCTION factura.validar_usuario_ejecutivo_financiadora(
 BEGIN
     RETURN EXISTS (
         SELECT 1
-        FROM core.usuario u
+        FROM identity.usuario u
         JOIN core.grupo_miembro gm ON gm.usuario_uuid = u.usuario_uuid
         JOIN core.grupo_trabajo gt ON gt.grupo_id = gm.grupo_id
         JOIN core.organizacion o ON o.organizacion_uuid = gt.organizacion_id
-        JOIN core.usuario_rol ur ON u.usuario_id = ur.usuario_id
-        JOIN core.rol r ON r.rol_id = ur.rol_id
+        JOIN identity.usuario_rol ur ON u.usuario_id = ur.usuario_id
+        JOIN identity.rol r ON r.rol_id = ur.rol_id
         WHERE
             u.usuario_uuid = p_usuario_uuid
             AND u.activo = TRUE
@@ -385,8 +385,8 @@ BEGIN
     FROM
         factura.factura fct
         JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-        LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-        LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
+        LEFT JOIN identity.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+        LEFT JOIN identity.contacto c ON u.contacto_id = c.contacto_id
         -- URL del adjunto principal para el visor
         LEFT JOIN LATERAL (
             SELECT mv.url_path
@@ -463,8 +463,8 @@ SELECT
 FROM
     factura.factura fct
     JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-    LEFT JOIN core.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-    LEFT JOIN core.contacto c ON u.contacto_id = c.contacto_id
+    LEFT JOIN identity.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
+    LEFT JOIN identity.contacto c ON u.contacto_id = c.contacto_id
     -- Traer los permisos concedidos
     JOIN permisos.access_policy ap ON ap.resource_type = 'FACTURA'
         AND ap.resource_id = fct.id
@@ -549,7 +549,7 @@ ALTER TABLE factura.factura
 ALTER TABLE factura.factura
   ADD CONSTRAINT fk_factura_gestor_usuario
   FOREIGN KEY (gestor_usuario_uuid)
-  REFERENCES core.usuario(usuario_uuid)
+  REFERENCES identity.usuario(usuario_uuid)
   ON UPDATE CASCADE
   ON DELETE SET NULL;
 

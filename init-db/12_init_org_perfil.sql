@@ -5,7 +5,7 @@
 -- Alcance: multi-país (no solo Chile)
 -- =============================================================================
 
-SET search_path TO public, core;
+SET search_path TO public, identity, core;
 
 -- ---------------------------------------------------------------------------
 -- 1. CATÁLOGOS COMPARTIDOS

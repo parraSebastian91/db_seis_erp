@@ -20,7 +20,7 @@
 -- NUNCA pasar SII_ENC_KEY como literal SQL en migraciones o seeds.
 -- =============================================================================
 
-SET search_path TO public, core;
+SET search_path TO public, identity, core;
 
 -- ---------------------------------------------------------------------------
 -- 1. TABLA DE CREDENCIALES SII
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS core.credencial_sii_auditoria (
     credencial_id   BIGINT NOT NULL
                     REFERENCES core.organizacion_credencial_sii(credencial_id)
                     ON DELETE CASCADE,
-    usuario_uuid    UUID   REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    usuario_uuid    UUID   REFERENCES identity.usuario(usuario_uuid) ON DELETE SET NULL,
     servicio        VARCHAR(50) NOT NULL,    -- 'ms-core', 'worker-storage', etc.
     operacion       VARCHAR(30) NOT NULL,    -- 'READ', 'ROTATE', 'VALIDATE'
     resultado       VARCHAR(10) NOT NULL

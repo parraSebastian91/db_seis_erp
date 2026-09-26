@@ -125,3 +125,13 @@ ALTER TABLE media.media_assets
     NOT VALID;
 
 CREATE INDEX idx_media_assets_mime_type ON media.media_assets (mime_type);
+
+-- FKs diferidas hacia media: identity y core se crean antes que media
+-- (00_b_init_identity.sql / 01_init_core.sql declaran media_id sin FK).
+ALTER TABLE identity.avatar_attachments
+    ADD CONSTRAINT fk_avatar_attachments_media
+    FOREIGN KEY (media_id) REFERENCES media.media_assets (id);
+
+ALTER TABLE core.organizacion_attachments
+    ADD CONSTRAINT fk_organizacion_attachments_media
+    FOREIGN KEY (media_id) REFERENCES media.media_assets (id);

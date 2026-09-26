@@ -44,7 +44,7 @@ SELECT
     gt.nombre AS nombre_grupo,
     o.razon_social AS org_grupo,
     o.tipo_participante
-FROM core.usuario u
+FROM identity.usuario u
 LEFT JOIN core.grupo_miembro gm ON gm.usuario_uuid = u.usuario_uuid AND gm.active = TRUE
 LEFT JOIN core.grupo_trabajo gt ON gt.grupo_id = gm.grupo_id AND gt.activo = TRUE
 LEFT JOIN core.organizacion o ON o.organizacion_uuid = gt.organizacion_id

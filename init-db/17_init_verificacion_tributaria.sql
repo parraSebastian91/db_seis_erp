@@ -21,7 +21,7 @@
 -- DEPENDE DE: 01_init_core.sql (core.organizacion, core.pais)
 -- =============================================================================
 
-SET search_path TO public, core;
+SET search_path TO public, identity, core;
 
 -- ============================================================================
 -- TABLA 1: organizacion_verificacion_tributaria

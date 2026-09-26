@@ -8,7 +8,7 @@
 -- DEPENDE DE: 01_init_core.sql, 12_init_org_perfil.sql
 -- =============================================================================
 
-SET search_path TO public, core;
+SET search_path TO public, identity, core;
 
 -- ============================================================================
 -- PARTE 1: Extender division_admin con soporte jerárquico multi-nivel

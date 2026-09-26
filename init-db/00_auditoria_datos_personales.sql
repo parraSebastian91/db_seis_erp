@@ -24,7 +24,7 @@
 │ SCHEMA: core                                                                │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-TABLE: core.contacto
+TABLE: identity.contacto
   🔴 nombres, apellido_paterno, apellido_materno   → Nombre completo persona natural
   🔴 tipo_documento + numero_documento             → RUT / DNI / Pasaporte (identificador único)
   🔴 fecha_nacimiento                              → Dato sensible (perfil etario)
@@ -34,10 +34,10 @@ TABLE: core.contacto
   🟡 redes_sociales JSONB                          → Perfiles en redes (dato de comportamiento)
   🟢 pais_emision, tipo_contacto_id                → Contexto, bajo riesgo
 
-TABLE: core.usuario
+TABLE: identity.usuario
   🔴 username                                      → Puede ser RUT o correo real
   🔴 password_hash                                 → Credencial (aunque hasheada)
-  🟡 contacto_id → core.contacto                  → Indirecto, por FK
+  🟡 contacto_id → identity.contacto                  → Indirecto, por FK
 
 TABLE: core.organizacion
   🔴 rut + dv (tipo PERSONA_NATURAL)               → Identificador persona natural dueña
@@ -56,13 +56,13 @@ TABLE: core.cuenta_bancaria
   🟠 correo_contacto                               → Canal de contacto
   🟢 banco                                         → Contexto
 
-TABLE: core.auth_refresh_sessions
+TABLE: identity.auth_refresh_sessions
   🟠 ip                                            → Dirección IP (dato personal en GDPR)
   🟠 user_agent                                    → Huella digital del dispositivo
   🟠 device_fingerprint                            → Huella del dispositivo
   🟡 refresh_token_hash                            → Credencial hasheada
 
-TABLE: core.password_reset_tokens
+TABLE: identity.password_reset_tokens
   🟠 email                                         → Dato de contacto
   🟠 ip_address                                    → Dirección IP
   🟠 user_agent                                    → Huella digital
@@ -131,20 +131,20 @@ TABLE: media.media_assets
 
 /*
 DATOS MÁS CRÍTICOS (acción inmediata):
-  1. core.contacto.numero_documento (RUT/DNI/Pasaporte) — identificador único personal
+  1. identity.contacto.numero_documento (RUT/DNI/Pasaporte) — identificador único personal
   2. core.cuenta_bancaria.numero + rut_titular        — dato bancario + identificador
   3. factura.factura.deudor_rut                        — RUT sin enmascarar en tabla principal
   4. core.organizacion_credencial_sii                  — credencial de sistema tributario
   5. factura.control_cambios.metadata JSONB            — histórico sin control, acumula todo
 
 DATOS DE RIESGO MEDIO (revisión):
-  6. core.auth_refresh_sessions.ip + device_fingerprint
-  7. core.contacto.redes_sociales JSONB               — perfiles de terceras plataformas
+  6. identity.auth_refresh_sessions.ip + device_fingerprint
+  7. identity.contacto.redes_sociales JSONB               — perfiles de terceras plataformas
   8. factura.historial_negocios.comentarios_*         — texto libre sin moderación
   9. media.media_assets.original_name                 — puede exponer identidad en nombre de archivo
 
 DATO POSITIVO — YA BIEN IMPLEMENTADO:
-  ✅ core.usuario.password_hash                       — hash, no texto plano
+  ✅ identity.usuario.password_hash                       — hash, no texto plano
   ✅ core.organizacion_credencial_sii.clave_sii_enc   — cifrado + Vault
   ✅ factura.autorizacion_publicacion                 — registro de consentimiento inmutable
   ✅ factura.version_terminos.hash_sha256             — prueba de integridad del texto
@@ -186,15 +186,15 @@ NIVEL 1 — BASE DE DATOS (PostgreSQL)
     FROM core.cuenta_bancaria;
 
 1b. ROW LEVEL SECURITY (RLS) — Solo el dueño o rol autorizado ve sus datos
-    ALTER TABLE core.contacto ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE identity.contacto ENABLE ROW LEVEL SECURITY;
     ALTER TABLE core.cuenta_bancaria ENABLE ROW LEVEL SECURITY;
     ALTER TABLE factura.factura ENABLE ROW LEVEL SECURITY;
 
     -- Política: usuario solo ve su propio contacto
-    CREATE POLICY pol_contacto_owner ON core.contacto
+    CREATE POLICY pol_contacto_owner ON identity.contacto
         FOR ALL
         USING (contacto_id IN (
-            SELECT contacto_id FROM core.usuario
+            SELECT contacto_id FROM identity.usuario
             WHERE usuario_uuid = current_setting('app.user_uuid')::UUID
         ));
 
@@ -207,12 +207,12 @@ NIVEL 1 — BASE DE DATOS (PostgreSQL)
 
 1d. RETENCIÓN Y BORRADO AUTOMÁTICO
     -- Eliminar sesiones expiradas (job nocturno o pg_cron)
-    DELETE FROM core.auth_refresh_sessions WHERE expires_at < now() - interval '7 days';
-    DELETE FROM core.password_reset_tokens WHERE expires_at < now() - interval '1 day';
+    DELETE FROM identity.auth_refresh_sessions WHERE expires_at < now() - interval '7 days';
+    DELETE FROM identity.password_reset_tokens WHERE expires_at < now() - interval '1 day';
 
     -- Pseudoanonimizar contactos eliminados (soft delete ya existe via eliminado_at)
     -- Al activar eliminado_at, reemplazar datos personales por tokens anónimos:
-    UPDATE core.contacto SET
+    UPDATE identity.contacto SET
         nombres = 'Usuario',
         apellido_paterno = 'Eliminado',
         apellido_materno = NULL,
@@ -285,7 +285,7 @@ NIVEL 4 — CUMPLIMIENTO (Ley 21.719 Chile)
 
 /*
 PRIORIDAD 1 — ANTES DE PRODUCCIÓN (bloqueante)
-  [ ] Activar RLS en core.contacto, core.cuenta_bancaria, factura.factura
+  [ ] Activar RLS en identity.contacto, core.cuenta_bancaria, factura.factura
   [ ] Enmascarar deudor_rut en vistas expuestas al frontend
   [ ] Cifrar numero en core.cuenta_bancaria (número de cuenta bancaria)
   [ ] Implementar pseudoanonimización al activar eliminado_at en contacto

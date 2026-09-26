@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS permisos.resource_owner (
     id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     resource_type        VARCHAR(80) NOT NULL REFERENCES permisos.resource_catalog(code),
     resource_id          UUID        NOT NULL,
-    owner_usuario_uuid   UUID        NOT NULL REFERENCES core.usuario(usuario_uuid)   ON DELETE CASCADE,
+    owner_usuario_uuid   UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid)   ON DELETE CASCADE,
     organizacion_id      UUID        NOT NULL REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
     es_propietario_principal BOOLEAN NOT NULL DEFAULT FALSE,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -75,11 +75,11 @@ CREATE TABLE IF NOT EXISTS permisos.access_policy (
     resource_id          UUID,                      -- NULL = aplica a TODOS los recursos de ese tipo en la org
 
     -- Quién recibe el permiso
-    grantee_usuario_uuid UUID        REFERENCES core.usuario(usuario_uuid)     ON DELETE CASCADE,
+    grantee_usuario_uuid UUID        REFERENCES identity.usuario(usuario_uuid)     ON DELETE CASCADE,
     grantee_grupo_id     UUID        REFERENCES core.grupo_trabajo(grupo_id)   ON DELETE CASCADE,
 
     -- Quién otorga el permiso
-    granter_usuario_uuid UUID        NOT NULL REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    granter_usuario_uuid UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid) ON DELETE SET NULL,
 
     -- Organización en la que aplica el permiso
     organizacion_id      UUID        NOT NULL REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
@@ -125,8 +125,8 @@ CREATE TABLE IF NOT EXISTS permisos.user_whitelist (
     id                       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     resource_type            VARCHAR(80) NOT NULL REFERENCES permisos.resource_catalog(code),
     resource_id              UUID,       -- NULL = permiso global por tipo de recurso
-    allowed_usuario_uuid     UUID        NOT NULL REFERENCES core.usuario(usuario_uuid) ON DELETE CASCADE,
-    granted_by_usuario_uuid  UUID        REFERENCES core.usuario(usuario_uuid) ON DELETE SET NULL,
+    allowed_usuario_uuid     UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid) ON DELETE CASCADE,
+    granted_by_usuario_uuid  UUID        REFERENCES identity.usuario(usuario_uuid) ON DELETE SET NULL,
     source_organizacion_id   UUID        REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
     permiso                  VARCHAR(80) NOT NULL DEFAULT 'VIEW',
     expires_at               TIMESTAMPTZ,
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS permisos.cross_org_sharing (
     resource_id              UUID        NOT NULL,
     owner_organizacion_id    UUID        NOT NULL REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
     recipient_organizacion_id UUID       NOT NULL REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
-    granted_by_usuario_uuid  UUID        NOT NULL REFERENCES core.usuario(usuario_uuid)           ON DELETE SET NULL,
+    granted_by_usuario_uuid  UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid)           ON DELETE SET NULL,
     access_level             VARCHAR(80) NOT NULL DEFAULT 'VIEW',
     valid_from               TIMESTAMPTZ NOT NULL DEFAULT now(),
     valid_until              TIMESTAMPTZ,
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS permisos.access_audit (
     id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     resource_type  VARCHAR(80) NOT NULL,
     resource_id    UUID        NOT NULL,
-    usuario_uuid   UUID        NOT NULL REFERENCES core.usuario(usuario_uuid)     ON DELETE CASCADE,
+    usuario_uuid   UUID        NOT NULL REFERENCES identity.usuario(usuario_uuid)     ON DELETE CASCADE,
     organizacion_id UUID       NOT NULL REFERENCES core.organizacion(organizacion_uuid) ON DELETE CASCADE,
     accion         VARCHAR(80) NOT NULL,    -- VIEW, DOWNLOAD, QUERY, SHARE, DENY …
     resultado      VARCHAR(20) NOT NULL DEFAULT 'ALLOWED', -- ALLOWED, DENIED
@@ -216,7 +216,7 @@ DECLARE
 BEGIN
     -- 0. Verificar que el usuario existe
     SELECT EXISTS (
-        SELECT 1 FROM core.usuario WHERE usuario_uuid = p_usuario_uuid
+        SELECT 1 FROM identity.usuario WHERE usuario_uuid = p_usuario_uuid
     ) INTO v_usuario_existe;
 
     IF NOT v_usuario_existe THEN
@@ -810,7 +810,7 @@ JOIN core.organizacion org
     ON org.organizacion_uuid = f.organizacion_id
 LEFT JOIN factura.vw_factura_ofertas_resumen r
     ON r.factura_id = f.id
-LEFT JOIN core.usuario u
+LEFT JOIN identity.usuario u
     ON u.usuario_uuid = f.gestor_usuario_uuid
 LEFT JOIN LATERAL (
     -- URL del adjunto principal (es_principal = TRUE) para el visor documental

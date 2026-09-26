@@ -192,7 +192,7 @@ SELECT
     maa.ip_address,
     maa.correlation_id
 FROM core.media_access_audit maa
-JOIN core.usuario u ON u.usuario_uuid = maa.usuario_uuid
+JOIN identity.usuario u ON u.usuario_uuid = maa.usuario_uuid
 JOIN core.organizacion o ON o.organizacion_id = maa.organizacion_id
 WHERE maa.media_id = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'::UUID
 ORDER BY maa.accessed_at DESC;
