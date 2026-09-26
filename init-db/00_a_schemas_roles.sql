@@ -43,4 +43,15 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA identity_api GRANT SELECT ON TABLES TO identi
 -- Mientras los servicios compartan el usuario de conexión actual, ese usuario
 -- pertenece a todos los grupos (no se rompe nada). Al separar credenciales por
 -- servicio, quitar estas membresías y asignar cada servicio a su grupo.
-GRANT identity_owner, core_owner, identity_api_reader TO desarrollo;
+-- Tolerante: si el usuario de carga no es superusuario, las membresías se
+-- asignan antes (ver proyectos-infra/scripts/load-seis-initdb.sh).
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'desarrollo')
+       AND NOT pg_has_role('desarrollo', 'identity_owner', 'MEMBER') THEN
+        GRANT identity_owner, core_owner, identity_api_reader TO desarrollo;
+    END IF;
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Sin privilegio para asignar membresías a desarrollo; asignarlas como superusuario';
+END
+$$;
