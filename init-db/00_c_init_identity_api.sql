@@ -63,10 +63,13 @@ CREATE POLICY pol_contacto_api_owner ON identity.contacto
 GRANT USAGE ON SCHEMA identity TO identity_api_owner;
 GRANT USAGE, CREATE ON SCHEMA identity_api TO identity_api_owner;
 
-GRANT SELECT (contacto_id, nombres, apellido_paterno, apellido_materno, correo)
+GRANT SELECT (contacto_id, nombres, apellido_paterno, apellido_materno, correo,
+              direccion, celular, fecha_nacimiento, redes_sociales,
+              tipo_documento, numero_documento, tipo_contacto_id)
     ON identity.contacto TO identity_api_owner;
-GRANT SELECT (usuario_id, usuario_uuid, username, activo, contacto_id, email_verificado)
+GRANT SELECT (usuario_id, usuario_uuid, username, activo, contacto_id, email_verificado, created_at)
     ON identity.usuario TO identity_api_owner;          -- sin password_hash
+GRANT SELECT ON identity.tipo_contacto TO identity_api_owner;
 GRANT SELECT ON identity.usuario_rol, identity.rol, identity.rol_modulo_permiso,
                 identity.modulo, identity.sistema, identity.funcionalidad,
                 identity.permiso
@@ -128,11 +131,36 @@ JOIN identity.sistema s              ON s.sistema_id = m.sistema_id AND s.activo
 LEFT JOIN identity.funcionalidad f   ON f.modulo_id = m.modulo_id AND f.activo = true
 JOIN identity.permiso p              ON p.permiso_id = rmp.permiso_id AND p.per_activo = true;
 
+-- Perfil completo del propio usuario (datos personales). Solo para que ms-core sirva
+-- GET /usuario/profile/:uuid, que ya exige uuid == usuario autenticado (SelfOnlyGuard).
+-- No filtrar por sesión aquí: la restricción de acceso vive en el servicio consumidor.
+CREATE OR REPLACE VIEW identity_api.v_usuario_perfil AS
+SELECT u.usuario_uuid,
+       u.username,
+       u.activo,
+       u.created_at,
+       c.nombres,
+       c.apellido_paterno,
+       c.apellido_materno,
+       c.direccion,
+       c.celular,
+       c.correo,
+       c.fecha_nacimiento,
+       c.redes_sociales,
+       c.tipo_documento,
+       c.numero_documento,
+       tc.nombre AS tipo_contacto
+FROM identity.usuario u
+JOIN identity.contacto c ON c.contacto_id = u.contacto_id
+LEFT JOIN identity.tipo_contacto tc ON tc.tipo_contacto_id = c.tipo_contacto_id;
+
+COMMENT ON VIEW identity_api.v_usuario_perfil IS 'Contrato identity_api v1. Perfil completo (datos personales); acceso restringido al propio usuario por el consumidor.';
 COMMENT ON VIEW identity_api.v_usuario IS 'Contrato identity_api v1. Usuario + nombre visible + correo.';
 COMMENT ON VIEW identity_api.v_usuario_rol IS 'Contrato identity_api v1. Roles por usuario.';
 COMMENT ON VIEW identity_api.v_usuario_navegacion IS 'Contrato identity_api v1. Navegación y permisos efectivos por usuario.';
 
-GRANT SELECT ON identity_api.v_usuario, identity_api.v_usuario_rol, identity_api.v_usuario_navegacion
+GRANT SELECT ON identity_api.v_usuario, identity_api.v_usuario_rol, identity_api.v_usuario_navegacion,
+                identity_api.v_usuario_perfil
     TO identity_api_reader;
 
 RESET ROLE;
