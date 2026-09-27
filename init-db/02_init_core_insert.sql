@@ -181,7 +181,7 @@ INSERT INTO identity.sistema (sistema_id, nombre, "path", descripcion, activo, i
 
 INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(2, 'Publicador', '/publicador-facturas', 'Publica tus facturas para financiarlas', true, 1, NULL);
 INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(6, 'Permisos', '/permisos', 'Gestion de plataforma', true, 3, NULL);
-INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(7, 'Mis Ofertas', '/mis-ofertas', 'Historial de todas las ofertas enviadas por el ejecutivo, con su estado actual.', true, 1, NULL);
+INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(7, 'Mis Ofertas', '/dashboard-facturas/mis-ofertas', 'Historial de todas las ofertas enviadas por el ejecutivo, con su estado actual.', true, 1, NULL);
 INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(8, 'Dashboard', '/dashboard-facturas/cedente', 'Informacion Graficada de gestion de facturas', true, 1, NULL);
 INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(1, 'Dashboard', '/dashboard-facturas/ejecutivo', 'Informacion Graficada de gestion de facturas', true, 1, NULL);
 INSERT INTO identity.modulo (modulo_id, nombre, "path", descripcion, activo, sistema_id, icono) VALUES(4, 'Work Team', '/team', 'Gestion de grupos de trabajo', true, 2, NULL);
