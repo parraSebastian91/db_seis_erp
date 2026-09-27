@@ -25,7 +25,7 @@ CREATE TABLE
         factura_numero VARCHAR(255) NOT NULL, -- Folio (extraído por OCR)
         monto_total VARCHAR(255) NOT null, -- Monto (extraído por OCR)
         fecha_vencimiento DATE NOT NULL, -- Vencimiento (extraído por OCR)
-        status factura_status NOT NULL DEFAULT 'PENDIENTE_VALIDACION', -- PENDIENTE_VALIDACION, PUBLICADA, OFERTADA, FINANCIADA, PAGADA, RECHAZADA, CANCELADA, VENCIDA, DENUNCIADA
+        status factura.factura_status NOT NULL DEFAULT 'PENDIENTE_VALIDACION', -- PENDIENTE_VALIDACION, PUBLICADA, OFERTADA, FINANCIADA, PAGADA, RECHAZADA, CANCELADA, VENCIDA, DENUNCIADA
         created_at TIMESTAMP
         WITH
             TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -33,6 +33,8 @@ CREATE TABLE
         WITH
             TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         created_by factura.create_by NOT NULL DEFAULT 'FORM',
+        correlation_id UUID NOT NULL,
+        gestor_usuario_uuid UUID REFERENCES identity.usuario (usuario_uuid) ON UPDATE CASCADE ON DELETE SET NULL,
         CONSTRAINT unique_factura_emisor_folio UNIQUE (organizacion_id, deudor_rut, factura_numero)
     );
 
@@ -65,7 +67,7 @@ CREATE TABLE
         investor_id UUID NOT NULL REFERENCES identity.usuario (usuario_uuid), -- Ejecutiva de la financiadora
         tasa DECIMAL(5, 4) NOT NULL CHECK (tasa > 0 AND tasa <= 1), -- Tasa propuesta (ej: 0.0150 para 1.5%)
         monto_oferta DECIMAL(15, 2) NOT NULL CHECK (monto_oferta > 0), -- Cuánto dinero le llegará a la empresa
-        status offer_status NOT NULL DEFAULT 'ENVIADA', -- ENVIADA, REVISADA, ACEPTADA, RECHAZADA
+        status factura.offer_status NOT NULL DEFAULT 'ENVIADA', -- ENVIADA, REVISADA, ACEPTADA, RECHAZADA
         created_at TIMESTAMP
         WITH
             TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -359,7 +361,7 @@ CREATE OR REPLACE FUNCTION factura.obtener_facturas_accesibles(
 ) AS $$
 BEGIN
     -- Verificar que el usuario sea ejecutivo de una financiadora
-    IF NOT permisos.validar_usuario_ejecutivo_financiadora(p_usuario_uuid) THEN
+    IF NOT factura.validar_usuario_ejecutivo_financiadora(p_usuario_uuid) THEN
         RETURN;
     END IF;
 
@@ -435,47 +437,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- =========================================================
--- Vista: facturas_accesibles_para_financiadora
--- Facturas que una financiadora (por org_id) puede ver.
--- Parámetro externo: requiere filtro en WHERE.
---
--- Uso: 
---   SELECT * FROM factura.vw_facturas_accesibles_por_org
---   WHERE organizacion_id = :financiera_org_uuid;
--- =========================================================
-CREATE OR REPLACE VIEW factura.vw_facturas_accesibles_por_org AS
-SELECT
-    fct.id AS factura_id,
-    fct.factura_numero AS folio,
-    fct.deudor_nombre,
-    fct.deudor_rut,
-    fct.monto_total,
-    o.razon_social AS cliente_nombre,
-    o.rut AS cliente_rut,
-    u.usuario_uuid AS gestor_id,
-    CONCAT(c.nombres, ' ', c.apellido_paterno, ' ', c.apellido_materno) AS gestor_nombre,
-    fct.fecha_vencimiento,
-    fct.status,
-    fct.created_at,
-    fct.updated_at,
-    gt.organizacion_id AS financiera_org_id
-FROM
-    factura.factura fct
-    JOIN core.organizacion o ON o.organizacion_uuid = fct.organizacion_id
-    LEFT JOIN identity.usuario u ON fct.gestor_usuario_uuid = u.usuario_uuid
-    LEFT JOIN identity.contacto c ON u.contacto_id = c.contacto_id
-    -- Traer los permisos concedidos
-    JOIN permisos.access_policy ap ON ap.resource_type = 'FACTURA'
-        AND ap.resource_id = fct.id
-        AND ap.revoked_at IS NULL
-        AND (ap.expires_at IS NULL OR ap.expires_at > NOW())
-    JOIN core.grupo_trabajo gt ON gt.grupo_id = ap.grantee_grupo_id
-        AND gt.activo = TRUE
-WHERE
-    fct.status = 'PUBLICADA'
-    AND (ap.grantee_grupo_id IS NOT NULL OR ap.grantee_usuario_uuid IS NOT NULL);
-
+-- La vista de facturas accesibles por organización financiera vive en
+-- 09_init_permisos.sql (permisos.vw_facturas_accesibles_por_org): depende de
+-- permisos.access_policy, que se crea ahí. Acá fallaba por orden de ejecución.
 
 DROP TRIGGER IF EXISTS tr_control_cambios_factura ON factura.factura;
 CREATE TRIGGER tr_control_cambios_factura
@@ -541,17 +505,7 @@ CREATE INDEX idx_relacion_preferida_org_financiadora ON factura.relaciones_prefe
 
 ALTER TABLE factura.historial_negocios ADD CONSTRAINT unique_invoice_deal UNIQUE (factura_id);
 ALTER TABLE factura.ofertas ADD revised_at timestamp NULL;
-ALTER TABLE factura.factura ADD correlation_id uuid NOT NULL;
-ALTER TABLE media.media_assets ADD gestor varchar NULL;
-ALTER TABLE factura.factura
-  ADD COLUMN gestor_usuario_uuid UUID;
-
-ALTER TABLE factura.factura
-  ADD CONSTRAINT fk_factura_gestor_usuario
-  FOREIGN KEY (gestor_usuario_uuid)
-  REFERENCES identity.usuario(usuario_uuid)
-  ON UPDATE CASCADE
-  ON DELETE SET NULL;
+ALTER TABLE media.media_assets ADD COLUMN IF NOT EXISTS gestor varchar NULL;
 
 CREATE INDEX idx_factura_gestor_usuario_uuid
   ON factura.factura (gestor_usuario_uuid);

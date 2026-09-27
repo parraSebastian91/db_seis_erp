@@ -843,8 +843,11 @@ LEFT JOIN LATERAL (
         LIMIT 1
     ) mv_adj ON TRUE
     WHERE fa.factura_id = f.id
-) adj ON TRUE
---WHERE f.status IN ('PUBLICADA', 'OFERTADA');
+) adj ON TRUE;
+-- El WHERE de estado quedó comentado a propósito (la vista trae todos los estados),
+-- pero se llevó el ';' y dejaba la sentencia sin terminar: el parser seguía hasta el
+-- siguiente CREATE y abortaba el archivo entero.
+--WHERE f.status IN ('PUBLICADA', 'OFERTADA')
 
 -- Devuelve únicamente facturas donde el usuario sí tiene VIEW.
 -- Evalúa permisos con permisos.check_access para:
